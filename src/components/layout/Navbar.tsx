@@ -28,14 +28,14 @@ export const Navbar: React.FC = () => {
         <div>
           <div className="flex items-center space-x-2">
             <span className="font-extrabold text-slate-900 tracking-tight text-lg">
-              Volt<span className="text-emerald-600">CRM</span>
+              Trisha<span className="text-emerald-600">Motors CRM</span>
             </span>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center space-x-1">
               <CheckCircle className="w-3 h-3 text-emerald-600" />
               <span>Showroom Operations</span>
             </span>
           </div>
-          <p className="text-xs text-slate-500 font-medium">Scooty & E-Rickshaw Single Showroom</p>
+          <p className="text-xs text-slate-500 font-medium">Trisha Motors EV Showroom</p>
         </div>
       </div>
 

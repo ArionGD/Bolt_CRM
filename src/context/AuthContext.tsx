@@ -18,7 +18,7 @@ interface AuthContextType {
 export const DEMO_PROFILES: Record<string, UserProfile> = {
   manager: {
     id: 'usr_manager_1',
-    email: 'manager1@voltdealership.com',
+    email: 'manager1@trishamotors.com',
     full_name: 'Manager 1',
     phone: '+91 98000 11111',
     role: 'manager',

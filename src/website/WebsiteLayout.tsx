@@ -56,7 +56,7 @@ export const WebsiteLayout: React.FC = () => {
             </div>
             <div>
               <span className="font-black text-xl tracking-tight text-slate-950">
-                Volt<span className="text-emerald-600">Dealership</span>
+                Trisha<span className="text-emerald-600">Motors</span>
               </span>
               <p className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase">
                 Authorized EV Experience Centre
@@ -171,14 +171,14 @@ export const WebsiteLayout: React.FC = () => {
                   <Zap className="w-6 h-6 stroke-[2.5]" />
                 </div>
                 <span className="font-extrabold text-xl tracking-tight text-white">
-                  Volt<span className="text-emerald-400">Dealership</span>
+                  Trisha<span className="text-emerald-400">Motors</span>
                 </span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Your authorized flagship showroom for zero-emission electric scooties and commercial passenger e-rickshaws. Low running cost, instant delivery, and verified state subsidies.
               </p>
               <div className="text-xs text-slate-400 font-mono">
-                Dealership ID: <span className="text-white font-bold">DEALER-01-EV</span>
+                Dealership ID: <span className="text-white font-bold">TRISHA-01-EV</span>
               </div>
             </div>
 
@@ -223,7 +223,7 @@ export const WebsiteLayout: React.FC = () => {
           </div>
 
           <div className="pt-8 border-t border-slate-900 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p>© 2026 VoltDealership. All rights reserved. 2-in-1 Marketing & Showroom CRM Platform.</p>
+            <p>© 2026 Trisha Motors. All rights reserved. 2-in-1 Marketing & Showroom CRM Platform.</p>
             <div className="flex items-center space-x-4 text-[11px]">
               <Link to="/crm" className="text-slate-400 hover:text-white font-medium">Internal CRM Login</Link>
               <span>•</span>

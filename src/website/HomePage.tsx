@@ -47,7 +47,7 @@ export const HomePage: React.FC = () => {
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold tracking-wide">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Authorized Single Showroom Experience</span>
+                <span>Trisha Motors Authorized EV Experience</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.1]">
@@ -398,7 +398,7 @@ export const HomePage: React.FC = () => {
         )}
       </section>
 
-      {/* Why Choose VoltDealership Section */}
+      {/* Why Choose Trisha Motors Section */}
       <section className="bg-slate-100/70 py-16 border-y border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
@@ -406,7 +406,7 @@ export const HomePage: React.FC = () => {
               Authorized Quality & Trust
             </span>
             <h2 className="text-3xl font-black text-slate-950 tracking-tight">
-              Why Customers Choose Our Showroom
+              Why Customers Choose Trisha Motors
             </h2>
             <p className="text-xs sm:text-sm text-slate-600">
               We eliminate intermediaries and make electric vehicle adoption smooth, transparent, and legally protected.

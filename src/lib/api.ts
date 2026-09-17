@@ -424,7 +424,7 @@ export const api = {
       customer_phone: customer?.phone || '',
       vehicle_id: data.vehicle_id,
       vin: vehicle?.vin || 'VIN' + Date.now(),
-      brand: vehicle?.brand || 'Dealer 1 EV',
+      brand: vehicle?.brand || 'Trisha Motors',
       model_name: vehicle?.model_name || 'Scooty Model 1',
       colour: vehicle?.colour || 'White',
       quotation_id: data.quotation_id,
@@ -525,7 +525,7 @@ export const api = {
       status: 'scheduled',
       customer_name: customer?.full_name || 'Customer',
       customer_phone: customer?.phone || '',
-      brand: data.brand || 'Dealer 1 EV',
+      brand: data.brand || 'Trisha Motors',
       model_name: data.model_name || 'Scooty Model 1',
       created_at: new Date().toISOString(),
     };
@@ -630,7 +630,7 @@ export const api = {
 
     const accounts = getStored<AccountRecord>(STORAGE_KEYS.ACCOUNTS, MOCK_ACCOUNTS);
     // Ensure Superuser from .env is always present
-    const superEmail = import.meta.env.VITE_SUPERUSER_EMAIL || 'superuser@voltdealership.com';
+    const superEmail = import.meta.env.VITE_SUPERUSER_EMAIL || 'superuser@boltcrm.com';
     const superName = import.meta.env.VITE_SUPERUSER_NAME || 'Developer Superuser';
     if (!accounts.some((a) => a.role === 'superuser')) {
       accounts.unshift({

@@ -1,6 +1,6 @@
-# Volt EV Dealership — 2-in-1 Marketing Showroom & Staff CRM
+# Trisha Motors — 2-in-1 Marketing Showroom & Staff CRM
 
-A modern, fast web platform built with React, Vite, and Tailwind CSS. Combines a public-facing electric vehicle showroom website with an internal operational dealership CRM and customer portal.
+A modern, fast web platform built with React, Vite, and Tailwind CSS. Combines a public-facing electric vehicle showroom website for Trisha Motors with an internal operational dealership CRM and customer portal.
 
 ## Modules
 1. **Public Marketing Showroom (`src/website/`)**:

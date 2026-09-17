@@ -21,8 +21,8 @@ export const LoginPage: React.FC = () => {
   // Tab: 'manager' (Showroom Manager) or 'customer'
   const [activeTab, setActiveTab] = useState<'manager' | 'customer'>('manager');
 
-  // Manager Form
-  const [email, setEmail] = useState('manager1@voltdealership.com');
+  // Manager form state
+  const [email, setEmail] = useState('manager1@trishamotors.com');
   const [password, setPassword] = useState('manager123');
 
   // Customer Form
@@ -80,7 +80,7 @@ export const LoginPage: React.FC = () => {
           </div>
         </Link>
         <h2 className="text-3xl font-extrabold text-white tracking-tight">
-          Volt<span className="text-emerald-400">Dealership</span>
+          Trisha<span className="text-emerald-400">Motors</span>
         </h2>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
           Account Login — Manager CRM & Customer Portal
@@ -142,7 +142,7 @@ export const LoginPage: React.FC = () => {
                   <input
                     type="email"
                     required
-                    placeholder="manager1@voltdealership.com"
+                    placeholder="manager1@trishamotors.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-9 pr-4 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono text-xs"

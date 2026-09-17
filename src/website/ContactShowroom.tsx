@@ -214,8 +214,8 @@ export const ContactShowroom: React.FC = () => {
                 <Navigation className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-white">Volt Dealership Showroom</h3>
-                <p className="text-xs text-slate-400 mt-1">Single Showroom Experience & Delivery Bay</p>
+                <h3 className="text-lg font-black text-white">Trisha Motors Showroom</h3>
+                <p className="text-xs text-slate-400 mt-1">Trisha Motors EV Experience & Delivery Bay</p>
               </div>
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 text-left space-y-2">
                 <div className="flex items-center space-x-2">
