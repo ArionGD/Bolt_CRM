@@ -19,17 +19,17 @@ import {
 import { MOCK_MODELS } from '../lib/mockData';
 
 export const HomePage: React.FC = () => {
-  // Quick test drive booking state
+  // Quick quote and price enquiry state
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedModel, setSelectedModel] = useState('Scooty Model 2');
   const [receiveAlerts, setReceiveAlerts] = useState(true);
-  const [booked, setBooked] = useState(false);
+  const [quoted, setQuoted] = useState(false);
 
-  const handleQuickBook = (e: React.FormEvent) => {
+  const handleQuickQuote = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !phone) return;
-    setBooked(true);
+    setQuoted(true);
   };
 
   const scootyModels = MOCK_MODELS.filter((m) => m.body_type === 'Scooty');
@@ -47,18 +47,18 @@ export const HomePage: React.FC = () => {
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold tracking-wide">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Trisha Motors Authorized EV Experience</span>
+                <span>Trisha Motors Authorized EV Showroom</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-950 tracking-tight leading-[1.1]">
-                Switch to Clean <br />
+                Clean & Affordable <br />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-sky-500">
-                  Electric Mobility.
+                  Electric Vehicles.
                 </span>
               </h1>
 
               <p className="text-base sm:text-lg text-slate-600 max-w-xl font-medium leading-relaxed">
-                Discover our authorized range of stylish personal <strong className="text-slate-900">EV Scooties</strong> and heavy-duty commercial <strong className="text-slate-900">E-Rickshaws</strong>. Enjoy instant delivery, state subsidies up to ₹10,000, and verified zero-cost RTO registrations.
+                Authorized showroom for high-mileage <strong className="text-slate-900">EV Scooters</strong> and heavy-duty commercial <strong className="text-slate-900">E-Rickshaws</strong>. Walk in for instant delivery, state subsidies up to ₹10,000, genuine battery warranty, and low-interest finance.
               </p>
 
               {/* Action Buttons */}
@@ -67,7 +67,7 @@ export const HomePage: React.FC = () => {
                   to="/explore"
                   className="px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-lg shadow-brand-600/30 flex items-center space-x-2 transition-all hover:scale-[1.02]"
                 >
-                  <span>Explore All Models</span>
+                  <span>View All Vehicles</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
 
@@ -75,7 +75,7 @@ export const HomePage: React.FC = () => {
                   to="/calculator"
                   className="px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-sm shadow-sm transition-all hover:border-slate-400"
                 >
-                  <span>On-Road Price Calculator</span>
+                  <span>Price & Subsidy Calculator</span>
                 </Link>
               </div>
 
@@ -96,42 +96,42 @@ export const HomePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Card: Quick Test Drive Booking Widget */}
+            {/* Right Card: Quick Best Price & Subsidy Enquiry Widget */}
             <div className="lg:col-span-5">
               <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-slate-200/80 relative">
-                <div className="absolute -top-3 right-6 bg-brand-600 text-white text-[11px] font-extrabold uppercase px-3 py-1 rounded-full shadow-md">
-                  Free Test Ride
+                <div className="absolute -top-3 right-6 bg-emerald-600 text-white text-[11px] font-extrabold uppercase px-3 py-1 rounded-full shadow-md">
+                  Best Price Offer
                 </div>
 
                 <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
-                    <Calendar className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Zap className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900">Book Test Drive Today</h3>
-                    <p className="text-xs text-slate-500">Instant showroom confirmation & slot reserved</p>
+                    <h3 className="text-lg font-black text-slate-900">Get Showroom Best Price</h3>
+                    <p className="text-xs text-slate-500">Instant price quote, subsidy breakdown & finance assistance</p>
                   </div>
                 </div>
 
-                {booked ? (
+                {quoted ? (
                   <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-3 animate-fade-in">
                     <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
                       <Check className="w-6 h-6 stroke-[3]" />
                     </div>
-                    <h4 className="font-extrabold text-emerald-900 text-base">Test Drive Reserved!</h4>
+                    <h4 className="font-extrabold text-emerald-900 text-base">Price Quote Sent!</h4>
                     <p className="text-xs text-emerald-700 leading-relaxed">
-                      Thank you <strong className="font-bold">{name}</strong>. Our showroom manager has scheduled your test ride for <strong className="font-bold">{selectedModel}</strong>. Please bring your driving license.
+                      Thank you <strong className="font-bold">{name}</strong>. Our showroom manager will call you at <strong className="font-bold">{phone}</strong> within 15 minutes with the best on-road price, FAME-II subsidy eligibility, and EMI finance options for <strong className="font-bold">{selectedModel}</strong>.
                     </p>
                     <button
                       type="button"
-                      onClick={() => setBooked(false)}
+                      onClick={() => setQuoted(false)}
                       className="mt-2 text-xs font-bold text-emerald-800 underline"
                     >
-                      Book another ride
+                      Inquire for another vehicle
                     </button>
                   </div>
                 ) : (
-                  <form onSubmit={handleQuickBook} className="space-y-4">
+                  <form onSubmit={handleQuickQuote} className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                         Full Name
@@ -196,10 +196,10 @@ export const HomePage: React.FC = () => {
 
                     <button
                       type="submit"
-                      className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center space-x-2"
+                      className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center space-x-2"
                     >
                       <Zap className="w-4 h-4" />
-                      <span>Confirm Test Drive</span>
+                      <span>Get Showroom Best Quote</span>
                     </button>
 
                     <p className="text-[11px] text-slate-400 text-center">
@@ -290,10 +290,10 @@ export const HomePage: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2">
                     <Link
-                      to="/test-drive"
+                      to={`/contact?model=${encodeURIComponent(m.model_name)}`}
                       className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold text-center transition-colors"
                     >
-                      Book Ride
+                      Visit Showroom
                     </Link>
                     <Link
                       to="/calculator"
@@ -379,13 +379,13 @@ export const HomePage: React.FC = () => {
 
                   <div className="pt-2 flex items-center space-x-3">
                     <Link
-                      to="/test-drive"
+                      to="/contact?model=E-Rickshaw%20Model%201"
                       className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs text-center transition-all shadow-md"
                     >
-                      Book Commercial Test Drive
+                      Visit Showroom & Inquiry
                     </Link>
                     <Link
-                      to="/calculator"
+                      to="/calculator?model=E-Rickshaw%20Model%201"
                       className="flex-1 py-3 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs text-center transition-all"
                     >
                       Calculate EMI
@@ -519,18 +519,18 @@ export const HomePage: React.FC = () => {
         <div className="rounded-3xl bg-gradient-to-r from-emerald-600 to-sky-600 p-8 sm:p-12 text-white flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl shadow-emerald-600/20">
           <div className="space-y-2">
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Ready to experience electric driving?
+              Ready to switch to electric?
             </h2>
             <p className="text-xs sm:text-sm text-emerald-100 max-w-lg">
-              Visit our showroom today for a personalized demonstration, instant loan appraisal, and free test ride.
+              Visit our showroom today for genuine price quotation, instant loan sanction, and spot vehicle delivery.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              to="/test-drive"
+              to="/calculator"
               className="px-6 py-3 rounded-2xl bg-white text-slate-950 font-bold text-xs hover:bg-slate-50 transition-all shadow-md"
             >
-              Book Test Drive
+              Price & Subsidy Calculator
             </Link>
             <Link
               to="/contact"

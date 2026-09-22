@@ -9,6 +9,7 @@ import { ExploreModels } from './website/ExploreModels';
 import { PriceCalculator } from './website/PriceCalculator';
 import { BookTestDrive } from './website/BookTestDrive';
 import { ContactShowroom } from './website/ContactShowroom';
+import { BatteriesAndSpares } from './website/BatteriesAndSpares';
 
 // Showroom Operations CRM Shell
 import { AppLayout } from './components/layout/AppLayout';
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/explore" element={<ExploreModels />} />
             <Route path="/calculator" element={<PriceCalculator />} />
+            <Route path="/spares" element={<BatteriesAndSpares />} />
             <Route path="/test-drive" element={<BookTestDrive />} />
             <Route path="/contact" element={<ContactShowroom />} />
           </Route>

@@ -185,10 +185,10 @@ export const ExploreModels: React.FC = () => {
 
                 <div className="space-y-2">
                   <Link
-                    to={`/test-drive?model=${encodeURIComponent(m.model_name)}`}
+                    to={`/contact?model=${encodeURIComponent(m.model_name)}`}
                     className="w-full py-2.5 rounded-xl font-bold text-xs text-center flex items-center justify-center space-x-1.5 transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20"
                   >
-                    <span>Book Test Drive</span>
+                    <span>Showroom Inquiry & Visit</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
 

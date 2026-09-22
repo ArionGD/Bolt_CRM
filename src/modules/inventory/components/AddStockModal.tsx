@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { VehicleModel, VehicleStatus } from '../../../types';
 import { api } from '../../../lib/api';
-import { Car, X, ShieldCheck, Sparkles } from 'lucide-react';
+import { Car, X, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface AddStockModalProps {
   models: VehicleModel[];
@@ -199,10 +199,10 @@ export const AddStockModal: React.FC<AddStockModalProps> = ({
             </div>
           </div>
 
-          {/* Atomic VIN Lock Notice */}
-          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-[11px] text-emerald-800 flex items-center space-x-2">
-            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>Database enforces unique physical VINs to prevent double allocation.</span>
+          {/* Unique Chassis Stock Notice */}
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-700 flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Unique VIN chassis number ensures accurate stock allocation without duplication.</span>
           </div>
 
           {/* Modal Action Buttons */}

@@ -198,27 +198,13 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Pinned Bottom Section: Atomic Lock Info & Dedicated Logout Button */}
+      {/* Pinned Bottom Section: Showroom Branch & Dedicated Logout Button */}
       <div className="p-3 space-y-2 border-t border-slate-800/80 shrink-0">
-        {/* Showroom atomic locking status & Branch indicator */}
-        <div className="p-2.5 rounded-xl bg-gradient-to-br from-slate-800 to-slate-850 border border-slate-700/60 text-xs">
-          <div className="flex items-center justify-between text-emerald-400 font-semibold mb-1">
-            <div className="flex items-center space-x-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Atomic VIN Lock</span>
-            </div>
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span>
-              Main Branch
-            </span>
-          </div>
-          <p className="text-slate-400 text-[10px] leading-relaxed">
-            Chassis allocation is enforced atomically at the database level.
-          </p>
-          <div className="mt-1.5 text-[10px] text-slate-400 font-mono flex items-center justify-between">
-            <span>Branch: <span className="text-slate-200">Trisha Central</span></span>
-            <span className="text-white font-bold uppercase">{role}</span>
-          </div>
+        <div className="px-1 py-1 flex items-center justify-between text-[11px] text-slate-400">
+          <span className="font-semibold text-slate-300">Trisha Central Showroom</span>
+          <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-800 text-emerald-400 border border-slate-700">
+            {role}
+          </span>
         </div>
 
         {/* Dedicated Logout Option at Bottom of Sidebar */}

@@ -72,7 +72,7 @@ export const WebsiteLayout: React.FC = () => {
                 }`
               }
             >
-              Explore Models
+              Our Vehicles
             </NavLink>
 
             <NavLink
@@ -85,11 +85,11 @@ export const WebsiteLayout: React.FC = () => {
                 }`
               }
             >
-              Price Calculator
+              Price & Subsidy
             </NavLink>
 
             <NavLink
-              to="/test-drive"
+              to="/spares"
               className={({ isActive }) =>
                 `px-3.5 py-2 rounded-xl transition-colors ${
                   isActive
@@ -98,7 +98,7 @@ export const WebsiteLayout: React.FC = () => {
                 }`
               }
             >
-              Book Test Drive
+              Batteries & Spares
             </NavLink>
 
             <NavLink
@@ -111,7 +111,7 @@ export const WebsiteLayout: React.FC = () => {
                 }`
               }
             >
-              Showroom Location
+              Showroom & Contact
             </NavLink>
           </nav>
 
@@ -246,7 +246,7 @@ export const WebsiteLayout: React.FC = () => {
                     className="hover:text-white transition-colors flex items-center space-x-1.5 text-slate-300"
                   >
                     <ChevronRight className="w-3 h-3 text-emerald-400" />
-                    <span>Explore EV Models & Specs</span>
+                    <span>Our Vehicles (Scooters & Rickshaws)</span>
                   </Link>
                 </li>
                 <li>
@@ -255,16 +255,16 @@ export const WebsiteLayout: React.FC = () => {
                     className="hover:text-white transition-colors flex items-center space-x-1.5 text-slate-300"
                   >
                     <ChevronRight className="w-3 h-3 text-emerald-400" />
-                    <span>On-Road Price & EMI Calculator</span>
+                    <span>On-Road Price & Govt Subsidy</span>
                   </Link>
                 </li>
                 <li>
                   <Link
-                    to="/test-drive"
+                    to="/spares"
                     className="hover:text-white transition-colors flex items-center space-x-1.5 text-slate-300"
                   >
                     <ChevronRight className="w-3 h-3 text-emerald-400" />
-                    <span>Book Free Showroom Test Drive</span>
+                    <span>Batteries & Genuine Spares</span>
                   </Link>
                 </li>
                 <li>

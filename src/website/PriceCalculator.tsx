@@ -322,10 +322,10 @@ export const PriceCalculator: React.FC = () => {
             {/* Actions */}
             <div className="space-y-2.5 pt-2 print:hidden">
               <Link
-                to={`/test-drive?model=${encodeURIComponent(currentModel.model_name)}`}
+                to={`/contact?model=${encodeURIComponent(currentModel.model_name)}`}
                 className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs text-center flex items-center justify-center space-x-1.5 shadow-md shadow-brand-500/20 transition-all"
               >
-                <span>Book Test Ride for {currentModel.model_name}</span>
+                <span>Visit Showroom & Book {currentModel.model_name}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
 

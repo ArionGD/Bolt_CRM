@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Tag,
   CheckCircle,
+  CheckCircle2,
   FileText,
   ShoppingBag,
   Sparkles,
@@ -198,13 +199,13 @@ export const VehicleDetailSubPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Atomic VIN Lock Callout */}
-            <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start space-x-3 text-xs text-emerald-900">
-              <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            {/* Unique Stock Verification */}
+            <div className="mt-4 p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start space-x-3 text-xs text-slate-800">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Atomic Physical VIN Lock Active</p>
-                <p className="text-[11px] text-emerald-700 mt-0.5">
-                  This VIN ({vehicle.vin}) is guaranteed unique at the database level. Once bound to a customer order, it cannot be double-sold.
+                <p className="font-bold">Physical Chassis Verified (VIN: {vehicle.vin})</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Allocated to showroom inventory. Guaranteed unique to prevent duplicate stock assignments.
                 </p>
               </div>
             </div>
