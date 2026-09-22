@@ -56,7 +56,7 @@ export const WebsiteLayout: React.FC = () => {
             </div>
             <div>
               <span className="font-black text-xl tracking-tight text-slate-950">
-                Trisha<span className="text-emerald-600">Motors</span>
+                Trisha <span className="text-emerald-600">Motors</span>
               </span>
               <p className="text-[11px] font-semibold text-slate-500 tracking-wide uppercase">
                 Authorized EV Experience Centre
@@ -171,7 +171,7 @@ export const WebsiteLayout: React.FC = () => {
                   <Zap className="w-6 h-6 stroke-[2.5]" />
                 </div>
                 <span className="font-extrabold text-xl tracking-tight text-white">
-                  Trisha<span className="text-emerald-400">Motors</span>
+                  Trisha <span className="text-emerald-400">Motors</span>
                 </span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">

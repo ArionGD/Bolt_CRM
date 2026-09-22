@@ -80,7 +80,7 @@ export const LoginPage: React.FC = () => {
           </div>
         </Link>
         <h2 className="text-3xl font-extrabold text-white tracking-tight">
-          Trisha<span className="text-emerald-400">Motors</span>
+          Trisha <span className="text-emerald-400">Motors</span>
         </h2>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
           Account Login — Manager CRM & Customer Portal
