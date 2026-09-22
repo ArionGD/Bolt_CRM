@@ -12,7 +12,7 @@ export const Breadcrumbs: React.FC = () => {
   const pathnames = location.pathname.split('/').filter((x) => x);
 
   // Helper to format path slugs to clean human-readable labels
-  const getLabel = (slug: string): string => {
+  const getLabel = (slug: string, prevSlug?: string): string => {
     switch (slug.toLowerCase()) {
       case 'crm':
         return 'CRM';
@@ -26,8 +26,11 @@ export const Breadcrumbs: React.FC = () => {
       case 'sales':
         return 'Sales';
       case 'statistics':
-      case 'reports':
         return 'Statistics';
+      case 'reports':
+        return prevSlug?.toLowerCase() === 'sales' ? 'Reports' : 'Statistics';
+      case 'tracker':
+        return 'Sales Tracker';
       case 'leads':
         return 'Leads & Pipeline';
       case 'test-drives':
@@ -64,10 +67,11 @@ export const Breadcrumbs: React.FC = () => {
       let currentPath = '/crm';
       for (let i = 1; i < pathnames.length; i++) {
         const slug = pathnames[i];
+        const prevSlug = i > 0 ? pathnames[i - 1] : undefined;
         currentPath += `/${slug}`;
         const isLast = i === pathnames.length - 1;
         breadcrumbs.push({
-          label: getLabel(slug),
+          label: getLabel(slug, prevSlug),
           to: isLast ? undefined : currentPath,
         });
       }

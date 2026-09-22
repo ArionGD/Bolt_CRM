@@ -3,6 +3,7 @@ import {
   ComponentItem,
   Customer,
   Lead,
+  MonthlySalesAggregate,
   Order,
   Payment,
   Quotation,
@@ -508,6 +509,12 @@ export const api = {
     vehicle_id: string;
     quotation_id?: string;
     booking_amount?: number;
+    initial_price?: number;
+    sold_price?: number;
+    insurance_charges?: number;
+    rto_charges?: number;
+    miscellaneous_charges?: number;
+    subsidy_discount?: number;
     payment_mode?: 'cash' | 'finance' | 'lease';
     finance_partner?: string;
     loan_amount?: number;
@@ -522,7 +529,18 @@ export const api = {
       throw new Error(`Vehicle ${vehicle.vin} is already reserved or sold! Double-selling prevented.`);
     }
 
-    const totalAmount = vehicle?.asking_price || 82000;
+    const soldPrice = Number(data.sold_price !== undefined ? data.sold_price : (vehicle?.asking_price || 82000));
+    const initialPrice = Number(data.initial_price !== undefined ? data.initial_price : (vehicle?.purchase_price || Math.round(soldPrice * 0.88)));
+    const insuranceCharges = Number(data.insurance_charges || 0);
+    const rtoCharges = Number(data.rto_charges || 0);
+    const miscCharges = Number(data.miscellaneous_charges || 0);
+    const subsidyDiscount = Number(data.subsidy_discount || 0);
+
+    // Total invoiced bill = Sold Price + Insurance + RTO + Misc - Subsidy
+    const totalAmount = soldPrice + insuranceCharges + rtoCharges + miscCharges - subsidyDiscount;
+    // Net profit made by dealer = (Sold Price - Initial Price) + Miscellaneous Charges
+    const netProfit = (soldPrice - initialPrice) + miscCharges;
+    const dealerMarginPct = soldPrice > 0 ? Number(((netProfit / soldPrice) * 100).toFixed(2)) : 0;
     const bookingAmt = data.booking_amount || 10000;
 
     const newOrder: Order = {
@@ -538,10 +556,18 @@ export const api = {
       colour: vehicle?.colour || 'White',
       quotation_id: data.quotation_id,
       booking_date: new Date().toISOString().split('T')[0],
+      initial_price: initialPrice,
+      sold_price: soldPrice,
+      insurance_charges: insuranceCharges,
+      rto_charges: rtoCharges,
+      miscellaneous_charges: miscCharges,
+      subsidy_discount: subsidyDiscount,
+      net_profit: netProfit,
+      dealer_margin_pct: dealerMarginPct,
       total_amount: totalAmount,
       booking_amount: bookingAmt,
       total_paid: bookingAmt,
-      balance_due: totalAmount - bookingAmt,
+      balance_due: Math.max(0, totalAmount - bookingAmt),
       status: 'booked',
       payment_mode: data.payment_mode || 'cash',
       finance_partner: data.finance_partner,
@@ -558,7 +584,10 @@ export const api = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          total_amount: totalAmount,
+        }),
       });
       if (res.ok) return await res.json();
     } catch {
@@ -687,6 +716,57 @@ export const api = {
       total_cash_collected,
       total_outstanding_balance,
     };
+  },
+
+  async getMonthlySalesReports(): Promise<MonthlySalesAggregate[]> {
+    const orders = await this.getOrders();
+    const map = new Map<string, MonthlySalesAggregate>();
+
+    for (const order of orders) {
+      if (order.status === 'cancelled') continue;
+      const dateStr = order.booking_date || (order.created_at ? order.created_at.split('T')[0] : '');
+      const d = dateStr ? new Date(dateStr) : new Date();
+      const year = isNaN(d.getFullYear()) ? new Date().getFullYear() : d.getFullYear();
+      const month = isNaN(d.getMonth()) ? new Date().getMonth() : d.getMonth();
+      const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const monthLabel = d.toLocaleString('default', { month: 'short', year: 'numeric' }) || monthKey;
+
+      const soldPrice = Number(order.sold_price !== undefined ? order.sold_price : (order.total_amount || 0));
+      const initialCost = Number(order.initial_price !== undefined ? order.initial_price : Math.round(soldPrice * 0.88));
+      const insurance = Number(order.insurance_charges || 0);
+      const rto = Number(order.rto_charges || 0);
+      const misc = Number(order.miscellaneous_charges || 0);
+      const profit = Number(order.net_profit !== undefined ? order.net_profit : ((soldPrice - initialCost) + misc));
+      const revenue = Number(order.total_amount || soldPrice);
+
+      const existing = map.get(monthKey) || {
+        month_key: monthKey,
+        month_label: monthLabel,
+        units_sold: 0,
+        total_initial_cost: 0,
+        total_revenue: 0,
+        total_insurance: 0,
+        total_rto: 0,
+        total_misc: 0,
+        total_profit: 0,
+        margin_pct: 0,
+      };
+
+      existing.units_sold += 1;
+      existing.total_initial_cost += initialCost;
+      existing.total_revenue += revenue;
+      existing.total_insurance += insurance;
+      existing.total_rto += rto;
+      existing.total_misc += misc;
+      existing.total_profit += profit;
+      existing.margin_pct = existing.total_revenue > 0
+        ? Number(((existing.total_profit / existing.total_revenue) * 100).toFixed(1))
+        : 0;
+
+      map.set(monthKey, existing);
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.month_key.localeCompare(b.month_key));
   },
 
   async getStockAgeing(): Promise<StockAgeingBucket> {

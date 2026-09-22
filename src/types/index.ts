@@ -187,6 +187,14 @@ export interface Order {
   colour: string;
   quotation_id?: string;
   booking_date: string;
+  initial_price?: number;
+  sold_price?: number;
+  insurance_charges?: number;
+  rto_charges?: number;
+  miscellaneous_charges?: number;
+  subsidy_discount?: number;
+  net_profit?: number;
+  dealer_margin_pct?: number;
   total_amount: number;
   booking_amount: number;
   total_paid: number;
@@ -201,6 +209,19 @@ export interface Order {
   insurance_policy_no?: string;
   insurance_expiry?: string;
   created_at: string;
+}
+
+export interface MonthlySalesAggregate {
+  month_key: string;
+  month_label: string;
+  units_sold: number;
+  total_initial_cost: number;
+  total_revenue: number;
+  total_insurance: number;
+  total_rto: number;
+  total_misc: number;
+  total_profit: number;
+  margin_pct: number;
 }
 
 export type PaymentMethod = 'cash' | 'upi' | 'card' | 'neft' | 'cheque' | 'finance_disbursal';

@@ -1,42 +1,37 @@
 import React from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import { Target, Gauge, FileText, ShoppingBag } from 'lucide-react';
+import { Target, Gauge, FileText, ShoppingBag, BarChart3, TrendingUp } from 'lucide-react';
 import { LeadsSubPage } from './components/LeadsSubPage';
 import { TestDrivesSubPage } from './components/TestDrivesSubPage';
 import { QuotationsSubPage } from './components/QuotationsSubPage';
 import { OrdersSubPage } from './components/OrdersSubPage';
+import { SalesReportsSubPage } from './components/SalesReportsSubPage';
 import { OrderDetailSubPage } from './components/OrderDetailSubPage';
 
-export type SalesSubTab = 'leads' | 'test-drives' | 'quotations' | 'orders';
+export type SalesSubTab = 'tracker' | 'reports' | 'leads' | 'test-drives' | 'quotations' | 'orders';
 
 export const SalesMain: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { subtab, id } = useParams<{ subtab?: string; id?: string }>();
   const navigate = useNavigate();
 
-  // Determine active tab from URL param or search param, default to 'leads'
-  const activeTab: SalesSubTab = (
-    (subtab as SalesSubTab) ||
-    (searchParams.get('tab') as SalesSubTab) ||
-    'leads'
-  );
+  // Determine active tab from URL param or search param, default to 'tracker'
+  let rawTab = (subtab || searchParams.get('tab') || 'tracker') as SalesSubTab;
+  if (rawTab === 'orders') rawTab = 'tracker';
 
+  const activeTab: SalesSubTab = rawTab;
   const orderId = id || searchParams.get('order_id');
 
   const handleTabChange = (tab: SalesSubTab) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('tab', tab);
-      next.delete('order_id');
-      return next;
-    });
+    navigate(`/crm/sales/${tab}`);
   };
 
   const tabs = [
-    { id: 'leads' as const, label: 'Leads & Pipeline', icon: Target },
-    { id: 'test-drives' as const, label: 'Test Drives', icon: Gauge },
+    { id: 'tracker' as const, label: 'Sales Tracker', icon: TrendingUp },
+    { id: 'reports' as const, label: 'Sales Reports & Analytics', icon: BarChart3 },
     { id: 'quotations' as const, label: 'Quotations', icon: FileText },
-    { id: 'orders' as const, label: 'Orders & Payments', icon: ShoppingBag },
+    { id: 'test-drives' as const, label: 'Test Drives', icon: Gauge },
+    { id: 'leads' as const, label: 'Leads & Pipeline', icon: Target },
   ];
 
   // If viewing a specific order's ledger detail
@@ -45,12 +40,7 @@ export const SalesMain: React.FC = () => {
       <OrderDetailSubPage
         orderId={orderId}
         onBack={() => {
-          setSearchParams((prev) => {
-            const next = new URLSearchParams(prev);
-            next.delete('order_id');
-            next.set('tab', 'orders');
-            return next;
-          });
+          navigate('/crm/sales/tracker');
         }}
       />
     );
@@ -65,7 +55,7 @@ export const SalesMain: React.FC = () => {
             Sales Operations
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Complete showroom revenue cycle: enquiries, test drives, quotations, and booking ledger.
+            Complete showroom revenue cycle: vehicle sales tracking, cost accounting, and month-wise profit reports.
           </p>
         </div>
 
@@ -95,10 +85,11 @@ export const SalesMain: React.FC = () => {
 
       {/* Render Active Sub-Page Component */}
       <div>
-        {activeTab === 'leads' && <LeadsSubPage />}
-        {activeTab === 'test-drives' && <TestDrivesSubPage />}
+        {activeTab === 'tracker' && <OrdersSubPage />}
+        {activeTab === 'reports' && <SalesReportsSubPage />}
         {activeTab === 'quotations' && <QuotationsSubPage />}
-        {activeTab === 'orders' && <OrdersSubPage />}
+        {activeTab === 'test-drives' && <TestDrivesSubPage />}
+        {activeTab === 'leads' && <LeadsSubPage />}
       </div>
     </div>
   );
