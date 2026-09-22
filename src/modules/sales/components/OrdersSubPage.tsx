@@ -71,6 +71,24 @@ export const OrdersSubPage: React.FC = () => {
         setSoldPrice(String(ask));
         setInitialPrice(String(cost));
       }
+
+      // Check if booking from an accepted quotation
+      const qId = searchParams.get('quotation_id');
+      if (qId) {
+        const quotes = await api.getQuotations();
+        const quote = quotes.find((q) => q.id === qId);
+        if (quote) {
+          if (quote.customer_id) setCustomerId(quote.customer_id);
+          const ask = Number(quote.ex_showroom) || 82000;
+          setSoldPrice(String(ask));
+          setInitialPrice(String(Math.round(ask * 0.88)));
+          setInsuranceCharges(String(quote.insurance || 0));
+          setRtoCharges(String(quote.registration || 0));
+          setMiscCharges(String((quote.accessories_total || 0) + (quote.handling_charges || 0)));
+          setSubsidyDiscount(String((quote.subsidy_amount || 0) + (quote.discount || 0)));
+          setShowBookModal(true);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {

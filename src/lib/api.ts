@@ -602,10 +602,45 @@ export const api = {
     const current = getStored(STORAGE_KEYS.ORDERS, MOCK_ORDERS);
     current.unshift(newOrder);
     setStored(STORAGE_KEYS.ORDERS, current);
+
+    // If advance booking deposit was paid, log structured initial Payment receipt
+    if (bookingAmt > 0) {
+      const initialPayment: Payment = {
+        id: 'pay_' + Date.now(),
+        order_id: newOrder.id,
+        amount: bookingAmt,
+        method: (data.payment_mode as Payment['method']) || 'cash',
+        payment_date: newOrder.booking_date,
+        reference_no: 'ADVANCE-BOOKING',
+        notes: 'Initial booking deposit payment',
+        created_at: new Date().toISOString(),
+      };
+      const payments = getStored<Payment>(STORAGE_KEYS.PAYMENTS, []);
+      payments.unshift(initialPayment);
+      setStored(STORAGE_KEYS.PAYMENTS, payments);
+    }
+
     return newOrder;
   },
 
-  async addPayment(orderId: string, payment: { amount: number; method: Payment['method']; notes?: string }): Promise<void> {
+  async getOrderPayments(orderId: string): Promise<Payment[]> {
+    try {
+      const token = localStorage.getItem('volt_token') || 'demo-admin-token';
+      const res = await fetch(`${API_BASE_URL}/orders/${orderId}/payments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) return await res.json();
+    } catch {
+      // Fallback
+    }
+    const payments = getStored<Payment>(STORAGE_KEYS.PAYMENTS, []);
+    return payments.filter((p) => p.order_id === orderId);
+  },
+
+  async addPayment(
+    orderId: string,
+    payment: { amount: number; method: Payment['method']; reference_no?: string; notes?: string }
+  ): Promise<void> {
     try {
       const token = localStorage.getItem('volt_token') || 'demo-admin-token';
       await fetch(`${API_BASE_URL}/orders/${orderId}/payments`, {
@@ -619,6 +654,20 @@ export const api = {
     } catch {
       // Fallback
     }
+
+    const newPayment: Payment = {
+      id: 'pay_' + Date.now(),
+      order_id: orderId,
+      amount: Number(payment.amount),
+      method: payment.method,
+      payment_date: new Date().toISOString().split('T')[0],
+      reference_no: payment.reference_no,
+      notes: payment.notes,
+      created_at: new Date().toISOString(),
+    };
+    const payments = getStored<Payment>(STORAGE_KEYS.PAYMENTS, []);
+    payments.unshift(newPayment);
+    setStored(STORAGE_KEYS.PAYMENTS, payments);
 
     const orders = getStored<Order>(STORAGE_KEYS.ORDERS, MOCK_ORDERS);
     const ordIdx = orders.findIndex((o) => o.id === orderId);
@@ -634,6 +683,41 @@ export const api = {
       };
       setStored(STORAGE_KEYS.ORDERS, orders);
     }
+  },
+
+  async updateOrder(orderId: string, updates: Partial<Order>): Promise<Order> {
+    try {
+      const token = localStorage.getItem('volt_token') || 'demo-admin-token';
+      const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) return await res.json();
+    } catch {
+      // Fallback
+    }
+
+    const orders = getStored<Order>(STORAGE_KEYS.ORDERS, MOCK_ORDERS);
+    const idx = orders.findIndex((o) => o.id === orderId);
+    if (idx === -1) throw new Error('Order not found');
+
+    const updated = { ...orders[idx], ...updates };
+    orders[idx] = updated;
+    setStored(STORAGE_KEYS.ORDERS, orders);
+
+    // If order is delivered, update vehicle to delivered
+    if (updates.status === 'delivered') {
+      await this.updateVehicle(updated.vehicle_id, { status: 'delivered' });
+    } else if (updates.status === 'cancelled') {
+      // If cancelled, free vehicle back to in_stock
+      await this.updateVehicle(updated.vehicle_id, { status: 'in_stock' });
+    }
+
+    return updated;
   },
 
   // --- Test Drives ---

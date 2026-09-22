@@ -191,7 +191,7 @@ export const QuotationsSubPage: React.FC = () => {
 
                     <td className="py-3.5 px-4 text-right">
                       <Link
-                        to={`/crm/sales?tab=orders&customer_id=${q.customer_id}&quotation_id=${q.id}`}
+                        to={`/crm/sales/tracker?customer_id=${q.customer_id}&quotation_id=${q.id}`}
                         className="inline-flex items-center px-2.5 py-1 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors shadow-sm"
                       >
                         <ShoppingBag className="w-3.5 h-3.5 mr-1" />
