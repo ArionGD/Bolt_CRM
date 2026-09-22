@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { Car, Cpu, Boxes, GitBranch } from 'lucide-react';
+import { Car, Cpu } from 'lucide-react';
 import { VehicleSubPage } from './components/VehicleSubPage';
 import { ComponentsSubPage } from './components/ComponentsSubPage';
 import { VehicleDetailSubPage } from './components/VehicleDetailSubPage';
@@ -51,16 +51,9 @@ export const InventoryMain: React.FC = () => {
       {/* Inventory Command Header with 2 Sub-Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
-          <div className="flex items-center space-x-2.5">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Inventory
-            </h1>
-            <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200/80 text-[11px] font-semibold text-slate-700">
-              <GitBranch className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Branch:</span>
-              <span className="text-emerald-700 font-bold capitalize">{activeTab}</span>
-            </div>
-          </div>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Inventory
+          </h1>
           <p className="text-sm text-slate-500 mt-1">
             Showroom physical vehicle chassis allocation and EV component workshop spares.
           </p>

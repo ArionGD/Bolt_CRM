@@ -54,10 +54,7 @@ export const Sidebar: React.FC = () => {
                 <Boxes className="w-3.5 h-3.5 text-slate-400" />
                 <span>Inventory</span>
               </div>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60 flex items-center">
-                <GitBranch className="w-2.5 h-2.5 mr-1 text-emerald-400" />
-                2 Branches
-              </span>
+              <GitBranch className="w-3 h-3 text-slate-500" />
             </div>
 
             {/* Visual Streamlined Tree Branch Connector Lines */}
