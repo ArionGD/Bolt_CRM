@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { api } from '../lib/api';
-import { Customer, Quotation, Vehicle, VehicleModel } from '../types';
+import { api } from '../../../lib/api';
+import { Customer, Quotation, Vehicle, VehicleModel } from '../../../types';
 import {
   FileText,
   Plus,
@@ -15,7 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export const Quotations: React.FC = () => {
+export const QuotationsSubPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -96,30 +96,30 @@ export const Quotations: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Subpage Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Quotations & Pricing</h1>
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Quotations & Pricing</h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
               {quotations.length} quotes
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-0.5">
             Server-side on-road calculations including state EV subsidies and registration costs.
           </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 shadow-sm transition-all"
+          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 shadow-sm transition-all cursor-pointer"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 mr-1.5" />
           <span>Generate Quote</span>
         </button>
       </div>
 
-      {/* Quotations List */}
+      {/* Quotations List Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Loading quotations...</div>
@@ -191,11 +191,11 @@ export const Quotations: React.FC = () => {
 
                     <td className="py-3.5 px-4 text-right">
                       <Link
-                        to={`/orders?customer_id=${q.customer_id}&quotation_id=${q.id}`}
+                        to={`/crm/sales?tab=orders&customer_id=${q.customer_id}&quotation_id=${q.id}`}
                         className="inline-flex items-center px-2.5 py-1 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors shadow-sm"
                       >
                         <ShoppingBag className="w-3.5 h-3.5 mr-1" />
-                        <span>Book Car</span>
+                        <span>Book to Order</span>
                       </Link>
                     </td>
                   </tr>
@@ -206,28 +206,29 @@ export const Quotations: React.FC = () => {
         )}
       </div>
 
-      {/* Quote Generator Modal */}
+      {/* Quote Builder Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 my-8">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 my-8">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center space-x-2">
                 <Calculator className="w-5 h-5 text-brand-600" />
-                <h3 className="font-extrabold text-lg text-slate-900">EV On-Road Quotation Builder</h3>
+                <h3 className="font-bold text-slate-900 text-lg">Generate EV Price Quotation</h3>
               </div>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateQuotation} className="mt-4 space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleCreateQuotation} className="mt-4 space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Customer *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Customer *</label>
                   <select
                     value={customerId}
                     onChange={(e) => setCustomerId(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    required
                   >
                     {customers.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -238,11 +239,12 @@ export const Quotations: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">EV Model *</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Vehicle Model *</label>
                   <select
                     value={modelId}
                     onChange={(e) => setModelId(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                    required
                   >
                     {models.map((m) => (
                       <option key={m.id} value={m.id}>
@@ -253,101 +255,91 @@ export const Quotations: React.FC = () => {
                 </div>
               </div>
 
-              {/* Price Breakdown Matrix */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <div className="flex justify-between items-center font-bold text-slate-900 border-b border-slate-200 pb-2">
-                  <span>Base Ex-Showroom Price (Verified):</span>
-                  <span className="font-extrabold text-sm">₹{exShowroom.toLocaleString('en-IN')}</span>
+              {/* Price Breakdown Grid */}
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
+                <div className="flex justify-between items-center text-sm font-bold text-slate-800 border-b border-slate-200 pb-2">
+                  <span>Base Ex-Showroom Price:</span>
+                  <span>₹{exShowroom.toLocaleString('en-IN')}</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">+ Zero-Dep Insurance (₹)</label>
+                    <label className="block text-slate-500 font-medium mb-1">Insurance (₹)</label>
                     <input
                       type="number"
                       value={insurance}
                       onChange={(e) => setInsurance(e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg font-medium"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">+ RTO & Green Registration (₹)</label>
+                    <label className="block text-slate-500 font-medium mb-1">RTO Registration (₹)</label>
                     <input
                       type="number"
                       value={registration}
                       onChange={(e) => setRegistration(e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg font-medium"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">+ Accessories & Wallbox (₹)</label>
+                    <label className="block text-slate-500 font-medium mb-1">Accessories (₹)</label>
                     <input
                       type="number"
                       value={accessories}
                       onChange={(e) => setAccessories(e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg font-medium"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-600 mb-1">+ Handling & Logistics (₹)</label>
+                    <label className="block text-slate-500 font-medium mb-1">Handling / Log (₹)</label>
                     <input
                       type="number"
                       value={handling}
                       onChange={(e) => setHandling(e.target.value)}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-lg font-medium"
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 border-t border-slate-200 pt-2">
                   <div>
-                    <label className="block font-semibold text-emerald-700 mb-1">- Showroom Festive Discount (₹)</label>
+                    <label className="block text-emerald-700 font-semibold mb-1">Discount (₹)</label>
                     <input
                       type="number"
                       value={discount}
                       onChange={(e) => setDiscount(e.target.value)}
-                      className="w-full p-2 bg-emerald-50/50 border border-emerald-200 rounded-lg font-medium text-emerald-800"
+                      className="w-full px-2.5 py-1.5 border border-emerald-300 rounded-lg bg-white text-emerald-800 font-bold"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-emerald-700 mb-1">- State EV / FAME Subsidy (₹)</label>
+                    <label className="block text-emerald-700 font-semibold mb-1">State EV Subsidy (₹)</label>
                     <input
                       type="number"
                       value={subsidy}
                       onChange={(e) => setSubsidy(e.target.value)}
-                      className="w-full p-2 bg-emerald-50/50 border border-emerald-200 rounded-lg font-medium text-emerald-800"
+                      className="w-full px-2.5 py-1.5 border border-emerald-300 rounded-lg bg-white text-emerald-800 font-bold"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Calculated Total Box */}
-              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold uppercase text-emerald-800 block">Total On-Road Price</span>
-                  <span className="text-xs text-emerald-600">Recomputed strictly by backend service</span>
-                </div>
-                <div className="text-2xl font-extrabold text-emerald-900">
-                  ₹{estimatedOnRoad.toLocaleString('en-IN')}
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
+                  <span className="font-extrabold text-slate-900 text-sm">Estimated Total On-Road:</span>
+                  <span className="text-lg font-black text-brand-700">
+                    ₹{estimatedOnRoad.toLocaleString('en-IN')}
+                  </span>
                 </div>
               </div>
 
-              <div className="pt-3 flex items-center justify-end space-x-3 border-t border-slate-100">
+              <div className="flex items-center justify-end space-x-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 shadow-sm"
+                  className="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-sm"
                 >
-                  Generate Official Quote
+                  Save & Issue Quotation
                 </button>
               </div>
             </form>
@@ -357,3 +349,5 @@ export const Quotations: React.FC = () => {
     </div>
   );
 };
+
+export default QuotationsSubPage;

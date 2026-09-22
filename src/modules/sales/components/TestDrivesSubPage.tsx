@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../lib/api';
-import { Customer, TestDrive, TestDriveStatus, Vehicle, VehicleModel } from '../types';
+import { api } from '../../../lib/api';
+import { Customer, TestDrive, TestDriveStatus, Vehicle, VehicleModel } from '../../../types';
 import {
   Gauge,
   Plus,
@@ -14,7 +14,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
-export const TestDrives: React.FC = () => {
+export const TestDrivesSubPage: React.FC = () => {
   const [testDrives, setTestDrives] = useState<TestDrive[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -77,28 +77,28 @@ export const TestDrives: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Subpage Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Showroom Test Drives</h1>
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Showroom Test Drives</h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
-              {testDrives.length} drives
+              {testDrives.length} trials
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">Manage customer vehicle trials, driver feedback, and demo car allocations.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Manage customer trial slots, demo car allocations, and feedback.</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 shadow-sm transition-all"
+          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 shadow-sm transition-all cursor-pointer"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 mr-1.5" />
           <span>Schedule Test Drive</span>
         </button>
       </div>
 
-      {/* Test Drives List */}
+      {/* Test Drives Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Loading trial slots...</div>
@@ -178,18 +178,18 @@ export const TestDrives: React.FC = () => {
                             const feedback = prompt('Enter customer driving experience feedback:');
                             if (feedback !== null) {
                               setTestDrives((prev) =>
-                                prev.map((t) =>
-                                  t.id === td.id ? { ...t, status: 'completed', feedback } : t
+                                prev.map((d) =>
+                                  d.id === td.id ? { ...d, status: 'completed', feedback: feedback || 'Completed successfully' } : d
                                 )
                               );
                             }
                           }}
-                          className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold rounded-lg hover:bg-emerald-100 transition-colors"
+                          className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
                         >
-                          Mark Completed
+                          Complete Trial
                         </button>
                       ) : (
-                        <span className="text-slate-400 text-xs font-semibold">Done</span>
+                        <span className="text-xs text-slate-400 font-medium">Archived</span>
                       )}
                     </td>
                   </tr>
@@ -205,10 +205,7 @@ export const TestDrives: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
-                <Gauge className="w-5 h-5 text-brand-600" />
-                <h3 className="font-extrabold text-lg text-slate-900">Schedule Test Drive Slot</h3>
-              </div>
+              <h3 className="font-bold text-slate-900 text-lg">Book Test Drive Slot</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -216,11 +213,12 @@ export const TestDrives: React.FC = () => {
 
             <form onSubmit={handleSchedule} className="mt-4 space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Customer *</label>
+                <label className="block font-semibold text-slate-700 mb-1">Customer *</label>
                 <select
                   value={customerId}
                   onChange={(e) => setCustomerId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  required
                 >
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -231,42 +229,43 @@ export const TestDrives: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Vehicle Model to Trial *</label>
+                <label className="block font-semibold text-slate-700 mb-1">Select Demo Vehicle Model *</label>
                 <select
                   value={modelId}
                   onChange={(e) => setModelId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  required
                 >
                   {models.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.brand} {m.model_name} ({m.variant || 'Standard'})
+                      {m.brand} {m.model_name} ({(m.body_type || 'EV').toUpperCase()})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Slot Date & Time *</label>
+                <label className="block font-semibold text-slate-700 mb-1">Slot Date & Time *</label>
                 <input
                   type="datetime-local"
-                  required
                   value={dateTime}
                   onChange={(e) => setDateTime(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  required
                 />
               </div>
 
-              <div className="pt-3 flex items-center justify-end space-x-3 border-t border-slate-100">
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 shadow-sm"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-sm"
                 >
                   Confirm Slot
                 </button>
@@ -278,3 +277,5 @@ export const TestDrives: React.FC = () => {
     </div>
   );
 };
+
+export default TestDrivesSubPage;

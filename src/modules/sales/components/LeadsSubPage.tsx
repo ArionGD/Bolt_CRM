@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../lib/api';
-import { Customer, Lead, LeadStatus, VehicleModel } from '../types';
+import { api } from '../../../lib/api';
+import { Customer, Lead, LeadStatus, VehicleModel } from '../../../types';
 import {
   Target,
   Plus,
   Phone,
   Calendar,
-  ChevronRight,
   Sparkles,
   CheckCircle2,
   XCircle,
   X,
   Car,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 const STAGES: { id: LeadStatus; label: string; color: string }[] = [
   { id: 'new', label: '1. New Enquiries', color: 'border-sky-300 bg-sky-50/50 text-sky-800' },
@@ -25,7 +23,7 @@ const STAGES: { id: LeadStatus; label: string; color: string }[] = [
   { id: 'lost', label: 'Lost', color: 'border-slate-300 bg-slate-50 text-slate-500' },
 ];
 
-export const Leads: React.FC = () => {
+export const LeadsSubPage: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [models, setModels] = useState<VehicleModel[]>([]);
@@ -97,23 +95,23 @@ export const Leads: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Subpage Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Lead Pipeline & Funnel</h1>
+            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Lead Pipeline</h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
-              {leads.length} active leads
+              {leads.length} active
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">From walk-in enquiry to quotation, test drive, and final booking.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Enquiry tracking from walk-in to test drive and final booking.</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 shadow-sm transition-all"
+          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 shadow-sm transition-all cursor-pointer"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 mr-1.5" />
           <span>Capture Lead</span>
         </button>
       </div>
@@ -122,7 +120,7 @@ export const Leads: React.FC = () => {
       {loading ? (
         <div className="p-12 text-center text-slate-500">Loading pipeline stages...</div>
       ) : (
-        <div className="flex space-x-4 overflow-x-auto pb-6 min-h-[550px]">
+        <div className="flex space-x-4 overflow-x-auto pb-6 min-h-[500px]">
           {STAGES.map((stage) => {
             const stageLeads = leads.filter((l) => l.status === stage.id);
             return (
@@ -175,7 +173,7 @@ export const Leads: React.FC = () => {
                         {stage.id === 'new' && (
                           <button
                             onClick={() => handleStageChange(lead.id, 'contacted')}
-                            className="w-full text-center py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded font-semibold text-[11px] transition-colors"
+                            className="w-full text-center py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded font-semibold text-[11px] transition-colors cursor-pointer"
                           >
                             Mark Contacted →
                           </button>
@@ -183,7 +181,7 @@ export const Leads: React.FC = () => {
                         {stage.id === 'contacted' && (
                           <button
                             onClick={() => handleStageChange(lead.id, 'test_drive_scheduled')}
-                            className="w-full text-center py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded font-semibold text-[11px] transition-colors"
+                            className="w-full text-center py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded font-semibold text-[11px] transition-colors cursor-pointer"
                           >
                             Book Test Drive →
                           </button>
@@ -191,7 +189,7 @@ export const Leads: React.FC = () => {
                         {stage.id === 'test_drive_scheduled' && (
                           <button
                             onClick={() => handleStageChange(lead.id, 'quoted')}
-                            className="w-full text-center py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold text-[11px] transition-colors"
+                            className="w-full text-center py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-semibold text-[11px] transition-colors cursor-pointer"
                           >
                             Send Quotation →
                           </button>
@@ -199,38 +197,38 @@ export const Leads: React.FC = () => {
                         {stage.id === 'quoted' && (
                           <button
                             onClick={() => handleStageChange(lead.id, 'negotiating')}
-                            className="w-full text-center py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded font-semibold text-[11px] transition-colors"
+                            className="w-full text-center py-1 bg-sky-100/60 hover:bg-sky-100 text-sky-800 rounded font-semibold text-[11px] transition-colors cursor-pointer"
                           >
-                            Negotiate Terms →
+                            Enter Negotiation →
                           </button>
                         )}
                         {stage.id === 'negotiating' && (
-                          <div className="flex space-x-1 w-full">
+                          <div className="w-full flex space-x-2">
                             <button
                               onClick={() => handleStageChange(lead.id, 'won')}
-                              className="flex-1 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[11px] transition-colors flex items-center justify-center space-x-1"
+                              className="flex-1 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-bold text-[11px] hover:bg-emerald-100 transition-colors cursor-pointer"
                             >
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Won</span>
+                              Won (Booked)
                             </button>
                             <button
                               onClick={() => handleStageChange(lead.id, 'lost')}
-                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded font-semibold text-[11px] transition-colors"
+                              className="px-2 py-1 bg-slate-100 text-slate-500 rounded font-bold text-[11px] hover:bg-slate-200 transition-colors cursor-pointer"
                             >
                               Lost
                             </button>
                           </div>
                         )}
                         {stage.id === 'won' && (
-                          <Link
-                            to={`/orders?customer_id=${lead.customer_id}`}
-                            className="w-full text-center py-1 bg-emerald-50 text-emerald-800 rounded font-bold text-[11px] hover:underline"
-                          >
-                            View Order Record →
-                          </Link>
+                          <div className="w-full text-center py-1 text-emerald-700 font-bold text-[11px] flex items-center justify-center space-x-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Deal Closed</span>
+                          </div>
                         )}
                         {stage.id === 'lost' && (
-                          <span className="text-[10px] text-slate-400 italic">Archived as lost</span>
+                          <div className="w-full text-center py-1 text-slate-400 font-medium text-[11px] flex items-center justify-center space-x-1">
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Archived</span>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -242,27 +240,28 @@ export const Leads: React.FC = () => {
         </div>
       )}
 
-      {/* Capture Lead Modal */}
+      {/* Add Lead Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
-                <Target className="w-5 h-5 text-brand-600" />
-                <h3 className="font-extrabold text-lg text-slate-900">Capture New Enquiry</h3>
-              </div>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+              <h3 className="font-bold text-slate-900 text-lg">Capture Sales Lead</h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleAddLead} className="mt-4 space-y-3 text-xs">
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Customer *</label>
+                <label className="block font-semibold text-slate-700 mb-1">Customer *</label>
                 <select
                   value={customerId}
                   onChange={(e) => setCustomerId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  required
                 >
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -273,43 +272,44 @@ export const Leads: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Interested EV Model *</label>
+                <label className="block font-semibold text-slate-700 mb-1">Interested EV Model *</label>
                 <select
                   value={modelId}
                   onChange={(e) => setModelId(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  required
                 >
                   {models.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.brand} {m.model_name} ({m.variant || 'Standard'})
+                      {m.brand} {m.model_name} ({(m.body_type || 'EV').toUpperCase()})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Expected Decision Date</label>
+                <label className="block font-semibold text-slate-700 mb-1">Target Close Date</label>
                 <input
                   type="date"
                   value={expectedDate}
                   onChange={(e) => setExpectedDate(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
               </div>
 
-              <div className="pt-3 flex items-center justify-end space-x-3 border-t border-slate-100">
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-brand-600 text-white rounded-xl font-semibold hover:bg-brand-700 shadow-sm"
+                  className="px-4 py-2 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-sm"
                 >
-                  Add to Pipeline
+                  Create Lead
                 </button>
               </div>
             </form>
@@ -319,3 +319,5 @@ export const Leads: React.FC = () => {
     </div>
   );
 };
+
+export default LeadsSubPage;

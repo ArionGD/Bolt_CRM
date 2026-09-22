@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Breadcrumbs } from '../common/Breadcrumbs';
 import {
   Zap,
   ShieldCheck,
@@ -39,18 +40,23 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm select-none">
-      {/* Brand: Strictly "Trisha Motors" */}
+      {/* Brand & Dynamic Route Breadcrumbs */}
       <div className="flex items-center space-x-3">
         <Link
           to="/"
-          className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-sky-400 flex items-center justify-center text-white shadow-md shadow-emerald-600/20"
+          className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-sky-400 flex items-center justify-center text-white shadow-md shadow-emerald-600/20 shrink-0"
           title="Back to Dealership Website"
         >
           <Zap className="w-6 h-6 stroke-[2.5]" />
         </Link>
-        <span className="font-extrabold text-slate-900 tracking-tight text-lg sm:text-xl">
+        <span className="font-extrabold text-slate-900 tracking-tight text-lg sm:text-xl shrink-0">
           Trisha Motors
         </span>
+
+        {/* Dynamic Route Breadcrumbs (Replaces static operations tag) */}
+        <div className="hidden sm:flex items-center pl-4 border-l border-slate-200">
+          <Breadcrumbs />
+        </div>
       </div>
 
       {/* Right controls: Public Website Link, Axum Admin Link & User profile dropdown */}

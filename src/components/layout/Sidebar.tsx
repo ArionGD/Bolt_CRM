@@ -4,9 +4,6 @@ import {
   LayoutDashboard,
   Car,
   Users,
-  Target,
-  Gauge,
-  FileText,
   ShoppingBag,
   BarChart3,
   Sparkles,
@@ -17,48 +14,40 @@ import { useAuth } from '../../context/AuthContext';
 export const Sidebar: React.FC = () => {
   const { role, logout } = useAuth();
 
+  // Exactly the 5 requested tabs
   const navItems = [
-    { label: 'Dashboard', to: '/crm', icon: LayoutDashboard },
-    { label: 'Vehicle Inventory', to: '/crm/inventory', icon: Car },
-    { label: 'Customers', to: '/crm/customers', icon: Users },
-    { label: 'Leads & Pipeline', to: '/crm/leads', icon: Target },
-    { label: 'Test Drives', to: '/crm/test-drives', icon: Gauge },
-    { label: 'Quotations', to: '/crm/quotations', icon: FileText },
-    { label: 'Orders & Payments', to: '/crm/orders', icon: ShoppingBag },
-    { label: 'Reports & Analytics', to: '/crm/reports', icon: BarChart3 },
+    { label: 'Overview', to: '/crm/overview', icon: LayoutDashboard },
+    { label: 'Inventory', to: '/crm/inventory', icon: Car },
+    { label: 'Customer', to: '/crm/customer', icon: Users },
+    { label: 'Sales', to: '/crm/sales', icon: ShoppingBag },
+    { label: 'Statistics', to: '/crm/statistics', icon: BarChart3 },
   ];
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 h-full overflow-hidden border-r border-slate-800 select-none">
-      {/* Top Navigation Items */}
-      <div className="p-4 space-y-3">
-        <div>
-          <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            Showroom Operations
-          </div>
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/crm'}
-                  className={({ isActive }) =>
-                    `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
-                      isActive
-                        ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
-                        : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                    }`
-                  }
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
-                </NavLink>
-              );
-            })}
-          </nav>
-        </div>
+      {/* 5-Pillar Navigation Menu (No Showroom Operations Tag) */}
+      <div className="p-4 space-y-2">
+        <nav className="space-y-1.5 pt-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                    isActive
+                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                  }`
+                }
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="capitalize">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
       </div>
 
       {/* Pinned Bottom Section: Atomic Lock Info & Dedicated Logout Button */}
@@ -80,7 +69,7 @@ export const Sidebar: React.FC = () => {
         {/* Dedicated Logout Option at Bottom of Sidebar */}
         <button
           onClick={logout}
-          className="w-full flex items-center justify-center space-x-2.5 px-4 py-2.5 rounded-xl font-medium text-xs text-slate-300 hover:text-red-300 bg-slate-800/50 hover:bg-red-500/15 border border-slate-700/40 hover:border-red-500/30 transition-all duration-150 group"
+          className="w-full flex items-center justify-center space-x-2.5 px-4 py-2.5 rounded-xl font-medium text-xs text-slate-300 hover:text-red-300 bg-slate-800/50 hover:bg-red-500/15 border border-slate-700/40 hover:border-red-500/30 transition-all duration-150 group cursor-pointer"
           title="Sign out of CRM"
         >
           <LogOut className="w-4 h-4 text-slate-400 group-hover:text-red-400 transition-colors" />

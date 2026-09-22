@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Dealership Public Marketing Website Pages
@@ -10,18 +10,15 @@ import { PriceCalculator } from './website/PriceCalculator';
 import { BookTestDrive } from './website/BookTestDrive';
 import { ContactShowroom } from './website/ContactShowroom';
 
-// Showroom Operations CRM Shell & Pages
+// Showroom Operations CRM Shell
 import { AppLayout } from './components/layout/AppLayout';
-import { Dashboard } from './pages/Dashboard';
-import { Inventory } from './pages/Inventory';
-import { VehicleDetail } from './pages/VehicleDetail';
-import { Customers } from './pages/Customers';
-import { Leads } from './pages/Leads';
-import { TestDrives } from './pages/TestDrives';
-import { Quotations } from './pages/Quotations';
-import { Orders } from './pages/Orders';
-import { OrderDetail } from './pages/OrderDetail';
-import { Reports } from './pages/Reports';
+
+// 5-Pillar CRM Modular Architecture Root Pages
+import { OverviewMain } from './modules/overview/overview_main';
+import { InventoryMain } from './modules/inventory/inventory_main';
+import { CustomerMain } from './modules/customer/customer_main';
+import { SalesMain } from './modules/sales/sales_main';
+import { StatisticsMain } from './modules/statistics/statistics_main';
 
 // Auth & Customer Portal Pages
 import { LoginPage } from './pages/LoginPage';
@@ -34,6 +31,12 @@ const ProtectedCrmRoute: React.FC<{ children: React.ReactNode }> = ({ children }
     return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
+};
+
+// Redirect helper for Order ID legacy routes
+const LegacyOrderRedirect: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/crm/sales?tab=orders&order_id=${id || ''}`} replace />;
 };
 
 export const App: React.FC = () => {
@@ -56,7 +59,7 @@ export const App: React.FC = () => {
           {/* Authentication (Manager & Customer with No Role Switching) */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Showroom Operations Staff CRM */}
+          {/* 5-Pillar Staff CRM (Protected) */}
           <Route
             path="/crm"
             element={
@@ -65,16 +68,30 @@ export const App: React.FC = () => {
               </ProtectedCrmRoute>
             }
           >
-            <Route index element={<Dashboard />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="inventory/:id" element={<VehicleDetail />} />
-            <Route path="customers" element={<Customers />} />
-            <Route path="leads" element={<Leads />} />
-            <Route path="test-drives" element={<TestDrives />} />
-            <Route path="quotations" element={<Quotations />} />
-            <Route path="orders" element={<Orders />} />
-            <Route path="orders/:id" element={<OrderDetail />} />
-            <Route path="reports" element={<Reports />} />
+            {/* 1. Overview Tab */}
+            <Route index element={<Navigate to="/crm/overview" replace />} />
+            <Route path="overview" element={<OverviewMain />} />
+
+            {/* 2. Inventory Tab (Stock list & VIN Detail) */}
+            <Route path="inventory" element={<InventoryMain />} />
+            <Route path="inventory/:id" element={<InventoryMain />} />
+
+            {/* 3. Customer Tab */}
+            <Route path="customer" element={<CustomerMain />} />
+            <Route path="customers" element={<Navigate to="/crm/customer" replace />} />
+
+            {/* 4. Sales Tab (Leads, Test Drives, Quotations, Orders & Payments) */}
+            <Route path="sales" element={<SalesMain />} />
+            <Route path="sales/:subtab" element={<SalesMain />} />
+            <Route path="leads" element={<Navigate to="/crm/sales?tab=leads" replace />} />
+            <Route path="test-drives" element={<Navigate to="/crm/sales?tab=test-drives" replace />} />
+            <Route path="quotations" element={<Navigate to="/crm/sales?tab=quotations" replace />} />
+            <Route path="orders" element={<Navigate to="/crm/sales?tab=orders" replace />} />
+            <Route path="orders/:id" element={<LegacyOrderRedirect />} />
+
+            {/* 5. Statistics Tab (Reports, Ageing & Analytics) */}
+            <Route path="statistics" element={<StatisticsMain />} />
+            <Route path="reports" element={<Navigate to="/crm/statistics" replace />} />
           </Route>
 
           {/* Fallback to Home */}
