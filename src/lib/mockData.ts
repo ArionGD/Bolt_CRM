@@ -1,5 +1,6 @@
 import {
   AccountRecord,
+  ComponentItem,
   Customer,
   Lead,
   Order,
@@ -93,6 +94,8 @@ export const MOCK_TEST_DRIVES: TestDrive[] = [];
 export const MOCK_QUOTATIONS: Quotation[] = [];
 
 export const MOCK_ORDERS: Order[] = [];
+
+export const MOCK_COMPONENTS: ComponentItem[] = [];
 
 /**
  * Operational Authentication Accounts (No dummy customer profiles)

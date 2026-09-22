@@ -85,7 +85,7 @@ export const OverviewMain: React.FC = () => {
         summary={summary}
       />
 
-      {/* Recent Activity & Stock Ageing Watch Component */}
+      {/* Recent Activity & Inventory Timeline Component */}
       <RecentActivity
         orders={orders}
         ageing={ageing}

@@ -101,7 +101,7 @@ export const StatisticsMain: React.FC = () => {
         </div>
       </div>
 
-      {/* Analytics Breakdown Grid: Stock Ageing & Funnel Conversion */}
+      {/* Analytics Breakdown Grid: Inventory Timeline & Funnel Conversion */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StockAgeingReport ageing={ageing} />
         <SalesSummaryChart summary={summary} leads={leads} />

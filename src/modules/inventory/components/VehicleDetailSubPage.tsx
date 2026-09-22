@@ -187,7 +187,7 @@ export const VehicleDetailSubPage: React.FC = () => {
                 </p>
               </div>
               <div>
-                <p className="text-slate-400 font-medium">Stock Ageing</p>
+                <p className="text-slate-400 font-medium">Inventory Timeline</p>
                 <p className="text-slate-900 font-bold mt-0.5">{ageDays} days in inventory</p>
               </div>
               <div>

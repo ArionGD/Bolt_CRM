@@ -21,12 +21,15 @@ web/src/modules/
 │   ├── overview_main.tsx                # Showroom Command Center entrypoint
 │   └── components/
 │       ├── OverviewMetrics.tsx          # Real-time stock, sales volume, and cash cards
-│       └── RecentActivity.tsx           # Recent bookings and stock ageing monitor
+│       └── RecentActivity.tsx           # Recent bookings and inventory timeline watch
 │
 ├── inventory/
-│   ├── inventory_main.tsx               # Vehicle inventory coordinator & filter table
+│   ├── inventory_main.tsx               # Coordinator with 2 sub-tabs: Vehicle & Components
 │   └── components/
+│       ├── VehicleSubPage.tsx           # Physical vehicle chassis stock table & filters
+│       ├── ComponentsSubPage.tsx        # EV spare parts, batteries, motors, chargers & valuation
 │       ├── AddStockModal.tsx            # Form to register new physical units with VIN
+│       ├── AddComponentModal.tsx        # Form to register EV components and spares
 │       └── VehicleDetailSubPage.tsx     # Physical VIN inspection, specs, and status
 │
 ├── customer/
@@ -47,7 +50,7 @@ web/src/modules/
     ├── statistics_main.tsx              # Executive intelligence & reports entrypoint
     └── components/
         ├── SalesSummaryChart.tsx        # Lead conversion funnel drop-off analytics
-        └── StockAgeingReport.tsx        # Inventory holding duration (<30d, 30-60d, >90d)
+        └── StockAgeingReport.tsx        # Inventory timeline holding duration (<30d, 30-60d, >90d)
 ```
 
 ---
@@ -60,10 +63,12 @@ The left sidebar (`web/src/components/layout/Sidebar.tsx`) provides 5 core pilla
 | Tab Name | Route | Purpose | Key Icons |
 |---|---|---|---|
 | **Overview** | `/crm/overview` | Command center, high-level KPIs, recent orders | `LayoutDashboard` |
-| **Inventory** | `/crm/inventory` | Physical EV units, VIN allocation, stock filter | `Car` |
+| **Inventory (Heading)** | `/crm/inventory` | Section grouping vehicle and component assets | `Boxes` |
+| ↳ **Vehicle** | `/crm/inventory/vehicle` | Physical EV units, VIN allocation, stock filter | `Car` |
+| ↳ **Components** | `/crm/inventory/components` | Battery packs, motors, chargers, spare parts | `Cpu` |
 | **Customer** | `/crm/customer` | Individual & business buyer directory | `Users` |
 | **Sales** | `/crm/sales` | Leads, test drives, quotes, orders & payments | `ShoppingBag` |
-| **Statistics** | `/crm/statistics` | Conversion funnel, stock ageing, executive metrics | `BarChart3` |
+| **Statistics** | `/crm/statistics` | Conversion funnel, inventory timeline, executive metrics | `BarChart3` |
 
 ### 3.2 Fixed Geometry & Layout Standards
 - **Non-Scrolling Sidebar**: Configured with `h-full overflow-hidden shrink-0 select-none` within an isolated viewport container (`h-screen overflow-hidden`).

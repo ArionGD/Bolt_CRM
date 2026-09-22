@@ -237,3 +237,33 @@ export interface LeadFunnelStage {
   stage: string;
   count: number;
 }
+
+export type ComponentCategory =
+  | 'batteries'
+  | 'motors'
+  | 'controllers'
+  | 'chargers'
+  | 'brakes'
+  | 'tyres'
+  | 'electronics'
+  | 'accessories'
+  | 'other';
+
+export type ComponentStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
+
+export interface ComponentItem {
+  id: string;
+  sku: string;
+  name: string;
+  category: ComponentCategory;
+  compatible_models: string[];
+  quantity: number;
+  min_reorder_level: number;
+  unit_price: number;
+  location_bin?: string;
+  supplier?: string;
+  warranty_months?: number;
+  status: ComponentStatus;
+  notes?: string;
+  created_at?: string;
+}

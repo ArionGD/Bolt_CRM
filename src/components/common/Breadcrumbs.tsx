@@ -36,6 +36,10 @@ export const Breadcrumbs: React.FC = () => {
         return 'Quotations';
       case 'orders':
         return 'Orders & Payments';
+      case 'vehicle':
+        return 'Vehicle';
+      case 'components':
+        return 'Components';
       default:
         // Format UUIDs, IDs, or hyphenated names
         if (slug.length > 15) {

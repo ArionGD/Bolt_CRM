@@ -1,5 +1,6 @@
 import {
   AccountRecord,
+  ComponentItem,
   Customer,
   Lead,
   Order,
@@ -13,6 +14,7 @@ import {
 } from '../types';
 import {
   MOCK_ACCOUNTS,
+  MOCK_COMPONENTS,
   MOCK_CUSTOMERS,
   MOCK_LEADS,
   MOCK_MODELS,
@@ -28,6 +30,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/
 const STORAGE_KEYS = {
   ACCOUNTS: 'trisha_crm_accounts',
   VEHICLES: 'trisha_crm_vehicles',
+  COMPONENTS: 'trisha_crm_components',
   CUSTOMERS: 'trisha_crm_customers',
   LEADS: 'trisha_crm_leads',
   QUOTATIONS: 'trisha_crm_quotations',
@@ -182,6 +185,89 @@ export const api = {
       return current[idx];
     }
     throw new Error('Vehicle not found');
+  },
+
+  // --- Components / Spare Parts ---
+  async getComponents(filter?: { category?: string; status?: string; search?: string }): Promise<ComponentItem[]> {
+    let list = getStored<ComponentItem>(STORAGE_KEYS.COMPONENTS, MOCK_COMPONENTS);
+    if (filter?.category && filter.category !== 'all') {
+      list = list.filter((c) => c.category === filter.category);
+    }
+    if (filter?.status && filter.status !== 'all') {
+      list = list.filter((c) => c.status === filter.status);
+    }
+    if (filter?.search) {
+      const q = filter.search.toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.sku.toLowerCase().includes(q) ||
+          c.location_bin?.toLowerCase().includes(q) ||
+          c.compatible_models.some((m) => m.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  },
+
+  async addComponent(
+    data: Omit<ComponentItem, 'id' | 'created_at' | 'status'> & { status?: ComponentItem['status'] }
+  ): Promise<ComponentItem> {
+    const computedStatus: ComponentItem['status'] =
+      data.status ||
+      (data.quantity === 0
+        ? 'out_of_stock'
+        : data.quantity <= data.min_reorder_level
+        ? 'low_stock'
+        : 'in_stock');
+    const newComponent: ComponentItem = {
+      ...data,
+      id: `cmp_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      status: computedStatus,
+      created_at: new Date().toISOString(),
+    };
+    const current = getStored<ComponentItem>(STORAGE_KEYS.COMPONENTS, MOCK_COMPONENTS);
+    current.unshift(newComponent);
+    setStored(STORAGE_KEYS.COMPONENTS, current);
+    return newComponent;
+  },
+
+  async updateComponent(id: string, updates: Partial<ComponentItem>): Promise<ComponentItem> {
+    const current = getStored<ComponentItem>(STORAGE_KEYS.COMPONENTS, MOCK_COMPONENTS);
+    const idx = current.findIndex((c) => c.id === id);
+    if (idx !== -1) {
+      const updated = { ...current[idx], ...updates };
+      if (updates.quantity !== undefined) {
+        if (updated.quantity === 0) updated.status = 'out_of_stock';
+        else if (updated.quantity <= updated.min_reorder_level) updated.status = 'low_stock';
+        else updated.status = 'in_stock';
+      }
+      current[idx] = updated;
+      setStored(STORAGE_KEYS.COMPONENTS, current);
+      return updated;
+    }
+    throw new Error('Component not found');
+  },
+
+  async adjustComponentQuantity(id: string, delta: number): Promise<ComponentItem> {
+    const current = getStored<ComponentItem>(STORAGE_KEYS.COMPONENTS, MOCK_COMPONENTS);
+    const idx = current.findIndex((c) => c.id === id);
+    if (idx !== -1) {
+      const newQty = Math.max(0, (current[idx].quantity || 0) + delta);
+      const updated = { ...current[idx], quantity: newQty };
+      if (newQty === 0) updated.status = 'out_of_stock';
+      else if (newQty <= updated.min_reorder_level) updated.status = 'low_stock';
+      else updated.status = 'in_stock';
+      current[idx] = updated;
+      setStored(STORAGE_KEYS.COMPONENTS, current);
+      return updated;
+    }
+    throw new Error('Component not found');
+  },
+
+  async deleteComponent(id: string): Promise<void> {
+    const current = getStored<ComponentItem>(STORAGE_KEYS.COMPONENTS, MOCK_COMPONENTS);
+    const filtered = current.filter((c) => c.id !== id);
+    setStored(STORAGE_KEYS.COMPONENTS, filtered);
   },
 
   // --- Customers ---

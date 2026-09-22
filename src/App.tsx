@@ -72,9 +72,9 @@ export const App: React.FC = () => {
             <Route index element={<Navigate to="/crm/overview" replace />} />
             <Route path="overview" element={<OverviewMain />} />
 
-            {/* 2. Inventory Tab (Stock list & VIN Detail) */}
+            {/* 2. Inventory Tab (Vehicle & Components Sub-Tabs, plus VIN Detail) */}
             <Route path="inventory" element={<InventoryMain />} />
-            <Route path="inventory/:id" element={<InventoryMain />} />
+            <Route path="inventory/:tabOrId" element={<InventoryMain />} />
 
             {/* 3. Customer Tab */}
             <Route path="customer" element={<CustomerMain />} />

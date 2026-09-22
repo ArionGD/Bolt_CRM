@@ -87,11 +87,11 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
         </div>
       </div>
 
-      {/* Stock Ageing Watch */}
+      {/* Inventory Timeline Watch */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
         <div>
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900">Stock Ageing Monitor</h2>
+            <h2 className="text-base font-bold text-slate-900">Inventory Timeline</h2>
             <ShieldAlert className="w-4 h-4 text-slate-400" />
           </div>
           <p className="text-xs text-slate-500">Holding days for units in stock/transit</p>

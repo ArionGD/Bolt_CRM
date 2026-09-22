@@ -1,8 +1,10 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Car,
+  Cpu,
+  Boxes,
   Users,
   ShoppingBag,
   BarChart3,
@@ -13,40 +15,116 @@ import { useAuth } from '../../context/AuthContext';
 
 export const Sidebar: React.FC = () => {
   const { role, logout } = useAuth();
+  const location = useLocation();
 
-  // Exactly the 5 requested tabs
-  const navItems = [
-    { label: 'Overview', to: '/crm/overview', icon: LayoutDashboard },
-    { label: 'Inventory', to: '/crm/inventory', icon: Car },
-    { label: 'Customer', to: '/crm/customer', icon: Users },
-    { label: 'Sales', to: '/crm/sales', icon: ShoppingBag },
-    { label: 'Statistics', to: '/crm/statistics', icon: BarChart3 },
-  ];
+  const isVehicleActive =
+    location.pathname === '/crm/inventory' ||
+    location.pathname === '/crm/inventory/vehicle' ||
+    (location.pathname.startsWith('/crm/inventory') && !location.pathname.includes('/components'));
+
+  const isComponentsActive =
+    location.pathname === '/crm/inventory/components' ||
+    (location.pathname.startsWith('/crm/inventory') && location.pathname.includes('/components'));
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 h-full overflow-hidden border-r border-slate-800 select-none">
-      {/* 5-Pillar Navigation Menu (No Showroom Operations Tag) */}
+      {/* 5-Pillar Navigation Menu with Inventory Heading & Sub-Options */}
       <div className="p-4 space-y-2">
-        <nav className="space-y-1.5 pt-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
+        <nav className="space-y-1.5 pt-1">
+          {/* 1. Overview */}
+          <NavLink
+            to="/crm/overview"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                isActive
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              }`
+            }
+          >
+            <LayoutDashboard className="w-4 h-4 shrink-0" />
+            <span>Overview</span>
+          </NavLink>
+
+          {/* 2. Inventory Section (Acts as Heading with Vehicle & Components Sub-Tabs) */}
+          <div className="pt-2 pb-1">
+            <div className="px-3.5 pb-1.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="flex items-center space-x-2">
+                <Boxes className="w-3.5 h-3.5 text-slate-400" />
+                <span>Inventory</span>
+              </div>
+            </div>
+            <div className="space-y-1 pl-2 pt-0.5">
               <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
-                    isActive
-                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                  }`
-                }
+                to="/crm/inventory/vehicle"
+                className={`flex items-center space-x-3 px-3.5 py-2 rounded-xl font-medium text-xs transition-all ${
+                  isVehicleActive
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                }`}
               >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="capitalize">{item.label}</span>
+                <Car className="w-3.5 h-3.5 shrink-0" />
+                <span>Vehicle</span>
               </NavLink>
-            );
-          })}
+
+              <NavLink
+                to="/crm/inventory/components"
+                className={`flex items-center space-x-3 px-3.5 py-2 rounded-xl font-medium text-xs transition-all ${
+                  isComponentsActive
+                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                }`}
+              >
+                <Cpu className="w-3.5 h-3.5 shrink-0" />
+                <span>Components</span>
+              </NavLink>
+            </div>
+          </div>
+
+          {/* 3. Customer */}
+          <NavLink
+            to="/crm/customer"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                isActive
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              }`
+            }
+          >
+            <Users className="w-4 h-4 shrink-0" />
+            <span>Customer</span>
+          </NavLink>
+
+          {/* 4. Sales */}
+          <NavLink
+            to="/crm/sales"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                isActive
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              }`
+            }
+          >
+            <ShoppingBag className="w-4 h-4 shrink-0" />
+            <span>Sales</span>
+          </NavLink>
+
+          {/* 5. Statistics */}
+          <NavLink
+            to="/crm/statistics"
+            className={({ isActive }) =>
+              `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                isActive
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+              }`
+            }
+          >
+            <BarChart3 className="w-4 h-4 shrink-0" />
+            <span>Statistics</span>
+          </NavLink>
         </nav>
       </div>
 
