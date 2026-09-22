@@ -71,17 +71,16 @@ export const Navbar: React.FC = () => {
           <span className="sm:hidden">Website</span>
         </Link>
 
-        {/* Axum Backend Superuser Panel Link */}
+        {/* Backend Admin Login Link (Only Shield Icon) */}
         <a
           href="http://localhost:8080/admin"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-xs font-semibold text-sky-700 transition-all"
-          title="Opens the Superuser Admin Panel served directly from the Axum backend"
+          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-xs font-semibold text-sky-700 transition-all cursor-pointer"
+          title="Open Backend Admin Login"
         >
-          <ShieldCheck className="w-3.5 h-3.5 text-sky-600" />
-          <span className="hidden md:inline">Superuser Panel</span>
-          <ExternalLink className="w-3 h-3 text-sky-500 ml-0.5" />
+          <ShieldCheck className="w-4 h-4 text-sky-600" />
+          <span className="hidden md:inline">Admin Login</span>
         </a>
 
         {/* Profile icon block with '>' icon and Dropdown menu */}
@@ -160,7 +159,7 @@ export const Navbar: React.FC = () => {
                 >
                   <div className="flex items-center space-x-2.5">
                     <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
-                    <span>Axum Superuser Panel</span>
+                    <span>Backend Admin Login</span>
                   </div>
                   <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
                 </a>
