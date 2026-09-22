@@ -185,6 +185,7 @@ export interface Order {
   brand: string;
   model_name: string;
   colour: string;
+  vehicle_type?: 'scooter' | 'rickshaw';
   quotation_id?: string;
   booking_date: string;
   initial_price?: number;
@@ -211,10 +212,26 @@ export interface Order {
   created_at: string;
 }
 
+export interface DailySalesAggregate {
+  date: string; // YYYY-MM-DD
+  date_label: string; // e.g. "22 Sep 2026"
+  day_of_week: string; // e.g. "Tuesday"
+  total_units: number;
+  scooter_units: number;
+  rickshaw_units: number;
+  total_initial_cost: number;
+  total_revenue: number;
+  total_profit: number;
+  margin_pct: number;
+  orders: Order[];
+}
+
 export interface MonthlySalesAggregate {
   month_key: string;
   month_label: string;
   units_sold: number;
+  scooter_units?: number;
+  rickshaw_units?: number;
   total_initial_cost: number;
   total_revenue: number;
   total_insurance: number;

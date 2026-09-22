@@ -2,6 +2,7 @@ import {
   AccountRecord,
   ComponentItem,
   Customer,
+  DailySalesAggregate,
   Lead,
   MonthlySalesAggregate,
   Order,
@@ -519,6 +520,7 @@ export const api = {
     finance_partner?: string;
     loan_amount?: number;
     expected_delivery?: string;
+    sale_date?: string;
   }): Promise<Order> {
     const customers = await this.getCustomers();
     const vehicles = await this.getVehicles();
@@ -528,6 +530,12 @@ export const api = {
     if (vehicle && vehicle.status !== 'in_stock' && vehicle.status !== 'in_transit') {
       throw new Error(`Vehicle ${vehicle.vin} is already reserved or sold! Double-selling prevented.`);
     }
+
+    const isRickshaw =
+      vehicle?.model_name?.toLowerCase().includes('rickshaw') ||
+      (vehicle as any)?.body_type?.toLowerCase().includes('rickshaw');
+    const vehicleType: 'scooter' | 'rickshaw' = isRickshaw ? 'rickshaw' : 'scooter';
+    const saleDate = data.sale_date || new Date().toISOString().split('T')[0];
 
     const soldPrice = Number(data.sold_price !== undefined ? data.sold_price : (vehicle?.asking_price || 82000));
     const initialPrice = Number(data.initial_price !== undefined ? data.initial_price : (vehicle?.purchase_price || Math.round(soldPrice * 0.88)));
@@ -554,8 +562,9 @@ export const api = {
       brand: vehicle?.brand || 'Trisha Motors',
       model_name: vehicle?.model_name || 'Scooty Model 1',
       colour: vehicle?.colour || 'White',
+      vehicle_type: vehicleType,
       quotation_id: data.quotation_id,
-      booking_date: new Date().toISOString().split('T')[0],
+      booking_date: saleDate,
       initial_price: initialPrice,
       sold_price: soldPrice,
       insurance_charges: insuranceCharges,
@@ -834,9 +843,20 @@ export const api = {
         total_misc: 0,
         total_profit: 0,
         margin_pct: 0,
+        scooter_units: 0,
+        rickshaw_units: 0,
       };
 
       existing.units_sold += 1;
+      const isRick =
+        order.vehicle_type === 'rickshaw' ||
+        order.model_name?.toLowerCase().includes('rickshaw');
+      if (isRick) {
+        existing.rickshaw_units = (existing.rickshaw_units || 0) + 1;
+      } else {
+        existing.scooter_units = (existing.scooter_units || 0) + 1;
+      }
+
       existing.total_initial_cost += initialCost;
       existing.total_revenue += revenue;
       existing.total_insurance += insurance;
@@ -851,6 +871,90 @@ export const api = {
     }
 
     return Array.from(map.values()).sort((a, b) => a.month_key.localeCompare(b.month_key));
+  },
+
+  async getDailySalesReports(daysRange = 14): Promise<DailySalesAggregate[]> {
+    const orders = await this.getOrders();
+    const activeOrders = orders.filter((o) => o.status !== 'cancelled');
+
+    const ordersByDate = new Map<string, Order[]>();
+    for (const o of activeOrders) {
+      const dateKey = o.booking_date || (o.created_at ? o.created_at.split('T')[0] : new Date().toISOString().split('T')[0]);
+      const list = ordersByDate.get(dateKey) || [];
+      list.push(o);
+      ordersByDate.set(dateKey, list);
+    }
+
+    const allDates = Array.from(ordersByDate.keys());
+    const today = new Date();
+    const dateSet = new Set<string>();
+
+    for (let i = daysRange - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      dateSet.add(d.toISOString().split('T')[0]);
+    }
+    for (const d of allDates) {
+      dateSet.add(d);
+    }
+
+    const sortedDates = Array.from(dateSet).sort();
+
+    const dailyAggregates: DailySalesAggregate[] = sortedDates.map((dateStr) => {
+      const d = new Date(dateStr + 'T00:00:00');
+      const dateLabel = !isNaN(d.getTime())
+        ? d.toLocaleDateString('default', { day: 'numeric', month: 'short', year: 'numeric' })
+        : dateStr;
+      const dayOfWeek = !isNaN(d.getTime())
+        ? d.toLocaleDateString('default', { weekday: 'short' })
+        : '';
+
+      const dayOrders = ordersByDate.get(dateStr) || [];
+      let totalInitial = 0;
+      let totalRev = 0;
+      let totalProf = 0;
+      let scooterUnits = 0;
+      let rickshawUnits = 0;
+
+      for (const ord of dayOrders) {
+        const soldPrice = Number(ord.sold_price !== undefined ? ord.sold_price : (ord.total_amount || 0));
+        const initialCost = Number(ord.initial_price !== undefined ? ord.initial_price : Math.round(soldPrice * 0.88));
+        const misc = Number(ord.miscellaneous_charges || 0);
+        const profit = Number(ord.net_profit !== undefined ? ord.net_profit : ((soldPrice - initialCost) + misc));
+        const rev = Number(ord.total_amount || soldPrice);
+
+        totalInitial += initialCost;
+        totalRev += rev;
+        totalProf += profit;
+
+        const isRick =
+          ord.vehicle_type === 'rickshaw' ||
+          ord.model_name?.toLowerCase().includes('rickshaw');
+        if (isRick) {
+          rickshawUnits++;
+        } else {
+          scooterUnits++;
+        }
+      }
+
+      const marginPct = totalRev > 0 ? Number(((totalProf / totalRev) * 100).toFixed(1)) : 0;
+
+      return {
+        date: dateStr,
+        date_label: dateLabel,
+        day_of_week: dayOfWeek,
+        total_units: dayOrders.length,
+        scooter_units: scooterUnits,
+        rickshaw_units: rickshawUnits,
+        total_initial_cost: totalInitial,
+        total_revenue: totalRev,
+        total_profit: totalProf,
+        margin_pct: marginPct,
+        orders: dayOrders,
+      };
+    });
+
+    return dailyAggregates;
   },
 
   async getStockAgeing(): Promise<StockAgeingBucket> {

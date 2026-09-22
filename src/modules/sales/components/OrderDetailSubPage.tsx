@@ -249,6 +249,17 @@ export const OrderDetailSubPage: React.FC<OrderDetailSubPageProps> = ({ orderId:
               >
                 {order.status.replace('_', ' ')}
               </span>
+              <span
+                className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full uppercase ${
+                  order.vehicle_type === 'rickshaw' || order.model_name?.toLowerCase().includes('rickshaw')
+                    ? 'bg-sky-100 text-sky-800 border border-sky-200'
+                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                }`}
+              >
+                {order.vehicle_type === 'rickshaw' || order.model_name?.toLowerCase().includes('rickshaw')
+                  ? '🛺 E-Rickshaw'
+                  : '🛵 EV Scooty'}
+              </span>
             </div>
             <h1 className="text-xl md:text-2xl font-black text-slate-900 mt-2">
               Sales Agreement for {order.customer_name}
