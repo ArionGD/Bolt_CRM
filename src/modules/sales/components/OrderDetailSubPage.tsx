@@ -621,18 +621,56 @@ export const OrderDetailSubPage: React.FC<OrderDetailSubPageProps> = ({ orderId:
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  <tr>
-                    <td className="py-2.5 px-3 border-r border-slate-200 font-medium">
-                      {order.brand} {order.model_name} Electric Vehicle (Ex-Showroom)
-                    </td>
-                    <td className="py-2.5 px-3 border-r border-slate-200 text-center font-mono text-[11px]">871160</td>
-                    <td className="py-2.5 px-3 border-r border-slate-200 text-right font-mono">
-                      ₹{Math.round(sold / 1.05).toLocaleString('en-IN')}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-mono font-bold">
-                      ₹{sold.toLocaleString('en-IN')}
-                    </td>
-                  </tr>
+                  {order.items && order.items.length > 0 ? (
+                    order.items.map((it) => {
+                      const isVeh = it.item_type === 'vehicle';
+                      const isRick = it.category === 'E-Rickshaw';
+                      const hsn = isVeh ? (isRick ? '870380' : '871160') : '871410';
+                      const taxRate = isVeh ? 1.05 : 1.18;
+                      const itemTotal = it.sold_price * it.quantity;
+                      const taxableVal = Math.round(itemTotal / taxRate);
+
+                      return (
+                        <tr key={it.id}>
+                          <td className="py-2.5 px-3 border-r border-slate-200 font-medium">
+                            <div>
+                              <span className="font-bold text-slate-900">{it.quantity}x {it.name}</span>
+                              <span className="ml-1.5 text-[11px] text-slate-500">
+                                ({isVeh ? `VIN: ${it.sku_or_vin}` : `SKU: ${it.sku_or_vin}`})
+                              </span>
+                            </div>
+                            {it.discount > 0 && (
+                              <div className="text-[10px] text-emerald-700 font-normal mt-0.5">
+                                Bargain Discount Applied: -₹{it.discount.toLocaleString('en-IN')}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-center font-mono text-[11px]">
+                            {hsn}
+                          </td>
+                          <td className="py-2.5 px-3 border-r border-slate-200 text-right font-mono">
+                            ₹{taxableVal.toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold">
+                            ₹{itemTotal.toLocaleString('en-IN')}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td className="py-2.5 px-3 border-r border-slate-200 font-medium">
+                        {order.brand} {order.model_name} Electric Vehicle (Ex-Showroom)
+                      </td>
+                      <td className="py-2.5 px-3 border-r border-slate-200 text-center font-mono text-[11px]">871160</td>
+                      <td className="py-2.5 px-3 border-r border-slate-200 text-right font-mono">
+                        ₹{Math.round(sold / 1.05).toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold">
+                        ₹{sold.toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  )}
 
                   {ins > 0 && (
                     <tr>

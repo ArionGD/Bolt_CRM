@@ -6,6 +6,7 @@ import {
   Lead,
   MonthlySalesAggregate,
   Order,
+  OrderItem,
   Payment,
   Quotation,
   SalesSummaryReport,
@@ -209,6 +210,11 @@ export const api = {
       );
     }
     return list;
+  },
+
+  async getComponentById(id: string): Promise<ComponentItem | undefined> {
+    const list = await this.getComponents();
+    return list.find((c) => c.id === id);
   },
 
   async addComponent(
@@ -506,8 +512,12 @@ export const api = {
   },
 
   async createOrder(data: {
-    customer_id: string;
-    vehicle_id: string;
+    customer_id?: string;
+    customer_name?: string;
+    customer_phone?: string;
+    customer_email?: string;
+    vehicle_id?: string;
+    items?: OrderItem[];
     quotation_id?: string;
     booking_amount?: number;
     initial_price?: number;
@@ -524,49 +534,145 @@ export const api = {
   }): Promise<Order> {
     const customers = await this.getCustomers();
     const vehicles = await this.getVehicles();
-    const customer = customers.find((c) => c.id === data.customer_id);
-    const vehicle = vehicles.find((v) => v.id === data.vehicle_id);
 
-    if (vehicle && vehicle.status !== 'in_stock' && vehicle.status !== 'in_transit') {
-      throw new Error(`Vehicle ${vehicle.vin} is already reserved or sold! Double-selling prevented.`);
+    // 1. Resolve or dynamically create Customer
+    let customer = data.customer_id ? customers.find((c) => c.id === data.customer_id) : undefined;
+    const phoneInput = data.customer_phone?.trim();
+    if (!customer && phoneInput) {
+      const cleanPhone = phoneInput.replace(/\D/g, '');
+      customer = customers.find(
+        (c) => c.phone.trim() === phoneInput || (cleanPhone.length > 0 && c.phone.replace(/\D/g, '') === cleanPhone)
+      );
+    }
+    if (!customer) {
+      const newCust: Customer = {
+        id: 'cust_' + Date.now(),
+        full_name: data.customer_name?.trim() || 'Walk-in Retail Customer',
+        phone: phoneInput || '9876543210',
+        email: data.customer_email?.trim() || `${(phoneInput || 'walkin').replace(/\D/g, '') || 'walkin'}@retail.local`,
+        type: 'individual',
+        address_line: 'Showroom Retail Counter',
+        city: 'Local',
+        state: 'Local',
+        pincode: '000000',
+        created_at: new Date().toISOString(),
+      };
+      customers.unshift(newCust);
+      setStored(STORAGE_KEYS.CUSTOMERS, customers);
+      customer = newCust;
     }
 
-    const isRickshaw =
-      vehicle?.model_name?.toLowerCase().includes('rickshaw') ||
-      (vehicle as any)?.body_type?.toLowerCase().includes('rickshaw');
-    const vehicleType: 'scooter' | 'rickshaw' = isRickshaw ? 'rickshaw' : 'scooter';
     const saleDate = data.sale_date || new Date().toISOString().split('T')[0];
 
-    const soldPrice = Number(data.sold_price !== undefined ? data.sold_price : (vehicle?.asking_price || 82000));
-    const initialPrice = Number(data.initial_price !== undefined ? data.initial_price : (vehicle?.purchase_price || Math.round(soldPrice * 0.88)));
+    // 2. Prepare multi-item array
+    let items: OrderItem[] = [];
+    if (data.items && data.items.length > 0) {
+      items = [...data.items];
+    } else if (data.vehicle_id) {
+      const vehicle = vehicles.find((v) => v.id === data.vehicle_id);
+      const isRick =
+        vehicle?.model_name?.toLowerCase().includes('rickshaw') ||
+        (vehicle as any)?.body_type?.toLowerCase().includes('rickshaw');
+      const sold = Number(data.sold_price !== undefined ? data.sold_price : (vehicle?.asking_price || 82000));
+      const init = Number(data.initial_price !== undefined ? data.initial_price : (vehicle?.purchase_price || Math.round(sold * 0.88)));
+      items = [
+        {
+          id: 'item_' + Date.now(),
+          item_type: 'vehicle',
+          item_id: data.vehicle_id,
+          name: `${vehicle?.brand || 'EV'} ${vehicle?.model_name || 'Vehicle'}`,
+          sku_or_vin: vehicle?.vin || 'VIN' + Date.now(),
+          category: isRick ? 'E-Rickshaw' : 'E-Scooter',
+          quantity: 1,
+          initial_cost_price: init,
+          mark_price: vehicle?.asking_price || sold,
+          sold_price: sold,
+          discount: Math.max(0, (vehicle?.asking_price || sold) - sold),
+          total_amount: sold,
+          total_profit: sold - init,
+        },
+      ];
+    }
+
+    // 3. Strict inventory availability validation - prevent selling anything out of stock
+    for (const item of items) {
+      if (item.item_type === 'vehicle') {
+        const v = vehicles.find((veh) => veh.id === item.item_id);
+        if (v && v.status !== 'in_stock' && v.status !== 'in_transit') {
+          throw new Error(`Vehicle ${v.vin} (${v.model_name}) is already reserved or sold! Cannot be sold.`);
+        }
+      } else if (item.item_type === 'component') {
+        const comp = await this.getComponentById(item.item_id);
+        if (!comp || comp.quantity < item.quantity) {
+          throw new Error(
+            `Component "${comp?.name || item.name}" has only ${comp?.quantity || 0} in stock. Cannot sell ${item.quantity} units!`
+          );
+        }
+      }
+    }
+
+    // 4. Atomically reserve vehicles and decrement component stock
+    for (const item of items) {
+      if (item.item_type === 'vehicle') {
+        await this.updateVehicle(item.item_id, { status: 'reserved' });
+      } else if (item.item_type === 'component') {
+        await this.adjustComponentQuantity(item.item_id, -item.quantity);
+      }
+    }
+
+    // 5. Aggregate financial computations
+    const totalSoldItems = items.reduce((sum, it) => sum + it.sold_price * it.quantity, 0);
+    const totalInitialCost = items.reduce((sum, it) => sum + it.initial_cost_price * it.quantity, 0);
+    const totalDiscount = items.reduce((sum, it) => sum + it.discount * it.quantity, 0);
+    const componentUnits = items
+      .filter((it) => it.item_type === 'component')
+      .reduce((sum, it) => sum + it.quantity, 0);
+
     const insuranceCharges = Number(data.insurance_charges || 0);
     const rtoCharges = Number(data.rto_charges || 0);
     const miscCharges = Number(data.miscellaneous_charges || 0);
     const subsidyDiscount = Number(data.subsidy_discount || 0);
 
-    // Total invoiced bill = Sold Price + Insurance + RTO + Misc - Subsidy
-    const totalAmount = soldPrice + insuranceCharges + rtoCharges + miscCharges - subsidyDiscount;
-    // Net profit made by dealer = (Sold Price - Initial Price) + Miscellaneous Charges
-    const netProfit = (soldPrice - initialPrice) + miscCharges;
-    const dealerMarginPct = soldPrice > 0 ? Number(((netProfit / soldPrice) * 100).toFixed(2)) : 0;
-    const bookingAmt = data.booking_amount || 10000;
+    // Total Invoiced = Sum of Items Sold + Insurance + RTO + Misc - Subsidy
+    const totalAmount = totalSoldItems + insuranceCharges + rtoCharges + miscCharges - subsidyDiscount;
+    // Net Dealer Profit = (Items Sold - Dealer Initial Cost) + Misc doc/handling fees
+    const netProfit = totalSoldItems - totalInitialCost + miscCharges;
+    const dealerMarginPct = totalSoldItems > 0 ? Number(((netProfit / totalSoldItems) * 100).toFixed(2)) : 0;
+    const bookingAmt = data.booking_amount !== undefined ? Number(data.booking_amount) : totalAmount;
+
+    // 6. Determine primary vehicle attributes if vehicle item included
+    const primaryVehItem = items.find((it) => it.item_type === 'vehicle');
+    const primaryVehicle = primaryVehItem ? vehicles.find((v) => v.id === primaryVehItem.item_id) : undefined;
+    const isRickshaw =
+      primaryVehicle?.model_name?.toLowerCase().includes('rickshaw') ||
+      (primaryVehicle as any)?.body_type?.toLowerCase().includes('rickshaw') ||
+      primaryVehItem?.category?.toLowerCase().includes('rickshaw');
+    const vehicleType: 'scooter' | 'rickshaw' | undefined = primaryVehItem
+      ? isRickshaw
+        ? 'rickshaw'
+        : 'scooter'
+      : undefined;
 
     const newOrder: Order = {
       id: 'ord_' + Date.now(),
       order_number: `ORD-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-      customer_id: data.customer_id,
-      customer_name: customer?.full_name || 'Customer 1',
-      customer_phone: customer?.phone || '',
-      vehicle_id: data.vehicle_id,
-      vin: vehicle?.vin || 'VIN' + Date.now(),
-      brand: vehicle?.brand || 'Trisha Motors',
-      model_name: vehicle?.model_name || 'Scooty Model 1',
-      colour: vehicle?.colour || 'White',
+      customer_id: customer.id,
+      customer_name: customer.full_name,
+      customer_phone: customer.phone,
+      customer_email: customer.email,
+      vehicle_id: primaryVehicle?.id || primaryVehItem?.item_id,
+      vin: primaryVehicle?.vin || primaryVehItem?.sku_or_vin,
+      brand: primaryVehicle?.brand || (primaryVehItem ? 'Trisha Motors' : 'Trisha Retail'),
+      model_name: primaryVehicle?.model_name || (primaryVehItem ? primaryVehItem.name : 'Accessories / Spares Sale'),
+      colour: primaryVehicle?.colour || (primaryVehItem ? 'Standard' : ''),
       vehicle_type: vehicleType,
+      items: items,
+      component_count: componentUnits,
       quotation_id: data.quotation_id,
       booking_date: saleDate,
-      initial_price: initialPrice,
-      sold_price: soldPrice,
+      initial_price: totalInitialCost,
+      sold_price: totalSoldItems,
+      discount_amount: totalDiscount,
       insurance_charges: insuranceCharges,
       rto_charges: rtoCharges,
       miscellaneous_charges: miscCharges,
@@ -603,16 +709,11 @@ export const api = {
       // Fallback
     }
 
-    // Reserve vehicle in local mock store
-    if (vehicle) {
-      await this.updateVehicle(vehicle.id, { status: 'reserved' });
-    }
-
     const current = getStored(STORAGE_KEYS.ORDERS, MOCK_ORDERS);
     current.unshift(newOrder);
     setStored(STORAGE_KEYS.ORDERS, current);
 
-    // If advance booking deposit was paid, log structured initial Payment receipt
+    // If initial payment was made, log structured Payment receipt
     if (bookingAmt > 0) {
       const initialPayment: Payment = {
         id: 'pay_' + Date.now(),
@@ -620,8 +721,8 @@ export const api = {
         amount: bookingAmt,
         method: (data.payment_mode as Payment['method']) || 'cash',
         payment_date: newOrder.booking_date,
-        reference_no: 'ADVANCE-BOOKING',
-        notes: 'Initial booking deposit payment',
+        reference_no: 'RETAIL-SALE-RECEIPT',
+        notes: `Initial counter payment for sale ${newOrder.order_number}`,
         created_at: new Date().toISOString(),
       };
       const payments = getStored<Payment>(STORAGE_KEYS.PAYMENTS, []);
@@ -719,11 +820,13 @@ export const api = {
     setStored(STORAGE_KEYS.ORDERS, orders);
 
     // If order is delivered, update vehicle to delivered
-    if (updates.status === 'delivered') {
-      await this.updateVehicle(updated.vehicle_id, { status: 'delivered' });
-    } else if (updates.status === 'cancelled') {
-      // If cancelled, free vehicle back to in_stock
-      await this.updateVehicle(updated.vehicle_id, { status: 'in_stock' });
+    if (updated.vehicle_id) {
+      if (updates.status === 'delivered') {
+        await this.updateVehicle(updated.vehicle_id, { status: 'delivered' });
+      } else if (updates.status === 'cancelled') {
+        // If cancelled, free vehicle back to in_stock
+        await this.updateVehicle(updated.vehicle_id, { status: 'in_stock' });
+      }
     }
 
     return updated;
@@ -848,14 +951,27 @@ export const api = {
       };
 
       existing.units_sold += 1;
-      const isRick =
-        order.vehicle_type === 'rickshaw' ||
-        order.model_name?.toLowerCase().includes('rickshaw');
-      if (isRick) {
-        existing.rickshaw_units = (existing.rickshaw_units || 0) + 1;
-      } else {
-        existing.scooter_units = (existing.scooter_units || 0) + 1;
+      const hasVehicle = !order.items || order.items.length === 0 || order.items.some((it) => it.item_type === 'vehicle');
+      if (hasVehicle) {
+        const isRick =
+          order.vehicle_type === 'rickshaw' ||
+          order.model_name?.toLowerCase().includes('rickshaw');
+        if (isRick) {
+          existing.rickshaw_units = (existing.rickshaw_units || 0) + 1;
+        } else {
+          existing.scooter_units = (existing.scooter_units || 0) + 1;
+        }
       }
+
+      let compUnitsInOrder = 0;
+      if (order.items && order.items.length > 0) {
+        for (const it of order.items) {
+          if (it.item_type === 'component') compUnitsInOrder += it.quantity;
+        }
+      } else if (order.component_count) {
+        compUnitsInOrder += order.component_count;
+      }
+      existing.component_units = (existing.component_units || 0) + compUnitsInOrder;
 
       existing.total_initial_cost += initialCost;
       existing.total_revenue += revenue;
@@ -915,6 +1031,7 @@ export const api = {
       let totalProf = 0;
       let scooterUnits = 0;
       let rickshawUnits = 0;
+      let componentUnits = 0;
 
       for (const ord of dayOrders) {
         const soldPrice = Number(ord.sold_price !== undefined ? ord.sold_price : (ord.total_amount || 0));
@@ -927,14 +1044,27 @@ export const api = {
         totalRev += rev;
         totalProf += profit;
 
-        const isRick =
-          ord.vehicle_type === 'rickshaw' ||
-          ord.model_name?.toLowerCase().includes('rickshaw');
-        if (isRick) {
-          rickshawUnits++;
-        } else {
-          scooterUnits++;
+        const hasVehicle = !ord.items || ord.items.length === 0 || ord.items.some((it) => it.item_type === 'vehicle');
+        if (hasVehicle) {
+          const isRick =
+            ord.vehicle_type === 'rickshaw' ||
+            ord.model_name?.toLowerCase().includes('rickshaw');
+          if (isRick) {
+            rickshawUnits++;
+          } else {
+            scooterUnits++;
+          }
         }
+
+        let compUnitsInOrder = 0;
+        if (ord.items && ord.items.length > 0) {
+          for (const it of ord.items) {
+            if (it.item_type === 'component') compUnitsInOrder += it.quantity;
+          }
+        } else if (ord.component_count) {
+          compUnitsInOrder += ord.component_count;
+        }
+        componentUnits += compUnitsInOrder;
       }
 
       const marginPct = totalRev > 0 ? Number(((totalProf / totalRev) * 100).toFixed(1)) : 0;
@@ -946,6 +1076,7 @@ export const api = {
         total_units: dayOrders.length,
         scooter_units: scooterUnits,
         rickshaw_units: rickshawUnits,
+        component_units: componentUnits,
         total_initial_cost: totalInitial,
         total_revenue: totalRev,
         total_profit: totalProf,

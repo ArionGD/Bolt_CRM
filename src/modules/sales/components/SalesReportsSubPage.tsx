@@ -118,6 +118,7 @@ export const SalesReportsSubPage: React.FC = () => {
     units_sold: number;
     scooter_units: number;
     rickshaw_units: number;
+    component_units?: number;
     margin_pct: number;
     rawDate: string;
   }
@@ -132,6 +133,7 @@ export const SalesReportsSubPage: React.FC = () => {
           units_sold: d.total_units,
           scooter_units: d.scooter_units,
           rickshaw_units: d.rickshaw_units,
+          component_units: d.component_units || 0,
           margin_pct: d.margin_pct,
           rawDate: d.date_label,
         }))
@@ -143,6 +145,7 @@ export const SalesReportsSubPage: React.FC = () => {
           units_sold: m.units_sold,
           scooter_units: m.scooter_units || 0,
           rickshaw_units: m.rickshaw_units || 0,
+          component_units: m.component_units || 0,
           margin_pct: m.margin_pct,
           rawDate: m.month_label,
         }));
@@ -596,6 +599,7 @@ export const SalesReportsSubPage: React.FC = () => {
                       <span>Breakdown:</span>
                       <span className="font-bold">
                         🛵 {hoveredPoint.scooter_units} Scooties • 🛺 {hoveredPoint.rickshaw_units} Rickshaws
+                        {hoveredPoint.component_units ? ` • ⚙️ ${hoveredPoint.component_units} Spares` : ''}
                       </span>
                     </div>
                   )}

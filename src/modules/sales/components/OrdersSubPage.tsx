@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { api } from '../../../lib/api';
-import { Customer, DailySalesAggregate, Order, OrderStatus, Vehicle } from '../../../types';
+import {
+  Customer,
+  DailySalesAggregate,
+  Order,
+  Vehicle,
+  ComponentItem,
+  OrderItem,
+} from '../../../types';
 import {
   ShoppingBag,
   Plus,
@@ -25,6 +32,13 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Trash2,
+  Tag,
+  Phone,
+  User,
+  Wrench,
+  Search,
+  Package,
 } from 'lucide-react';
 
 export const OrdersSubPage: React.FC = () => {
@@ -33,55 +47,75 @@ export const OrdersSubPage: React.FC = () => {
   const [dailySales, setDailySales] = useState<DailySalesAggregate[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [components, setComponents] = useState<ComponentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'daily_timeline' | 'table'>('daily_timeline');
   const [showBookModal, setShowBookModal] = useState(false);
   const [showAllDays, setShowAllDays] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // Form State for Booking / Sales Recording
-  const [customerId, setCustomerId] = useState(searchParams.get('customer_id') || '');
-  const [vehicleId, setVehicleId] = useState(searchParams.get('vehicle_id') || '');
+  // ==========================================
+  // POS Checkout Form State
+  // ==========================================
   const [saleDate, setSaleDate] = useState(new Date().toISOString().split('T')[0]);
-  
-  // Cost, Pricing & Fees Inputs
-  const [initialPrice, setInitialPrice] = useState('72000');
-  const [soldPrice, setSoldPrice] = useState('85000');
+
+  // Customer Mall Checkout Details
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerId, setCustomerId] = useState('');
+  const [isExistingCustomer, setIsExistingCustomer] = useState(false);
+
+  // Cart / Invoiced Items
+  const [cartItems, setCartItems] = useState<OrderItem[]>([]);
+
+  // Item Picker Mode & Selection
+  const [pickerTab, setPickerTab] = useState<'vehicle' | 'component'>('vehicle');
+
+  // Vehicle Picker Inputs
+  const [pickedVehicleId, setPickedVehicleId] = useState('');
+  const [vehCostPrice, setVehCostPrice] = useState<number>(0);
+  const [vehMarkPrice, setVehMarkPrice] = useState<number>(0);
+  const [vehSoldPrice, setVehSoldPrice] = useState<number>(0);
+
+  // Component Picker Inputs
+  const [pickedComponentId, setPickedComponentId] = useState('');
+  const [compQty, setCompQty] = useState<number>(1);
+  const [compCostPrice, setCompCostPrice] = useState<number>(0);
+  const [compMarkPrice, setCompMarkPrice] = useState<number>(0);
+  const [compSoldPrice, setCompSoldPrice] = useState<number>(0);
+
+  // Showroom Direct Charges
   const [insuranceCharges, setInsuranceCharges] = useState('3500');
   const [rtoCharges, setRtoCharges] = useState('4500');
   const [miscCharges, setMiscCharges] = useState('1500');
   const [subsidyDiscount, setSubsidyDiscount] = useState('0');
 
-  const [bookingAmount, setBookingAmount] = useState('15000');
-  const [paymentMode, setPaymentMode] = useState<'cash' | 'finance' | 'lease'>('finance');
+  // Payment & Settlement
+  const [bookingAmount, setBookingAmount] = useState('');
+  const [paymentMode, setPaymentMode] = useState<'cash' | 'finance' | 'lease'>('cash');
   const [financePartner, setFinancePartner] = useState('HDFC Auto Finance');
-  const [loanAmount, setLoanAmount] = useState('60000');
+  const [loanAmount, setLoanAmount] = useState('0');
   const [deliveryDate, setDeliveryDate] = useState(
-    new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0]
+    new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
   );
 
   async function loadData() {
     try {
-      const [oList, dailyList, cList, vList] = await Promise.all([
+      const [oList, dailyList, cList, vList, compList] = await Promise.all([
         api.getOrders(),
         api.getDailySalesReports(14),
         api.getCustomers(),
         api.getVehicles(),
+        api.getComponents(),
       ]);
       setOrders(oList);
       setDailySales(dailyList);
       setCustomers(cList);
       setVehicles(vList);
-      if (cList.length > 0 && !customerId) setCustomerId(cList[0].id);
-
-      const available = vList.filter((v) => v.status === 'in_stock' || v.status === 'in_transit');
-      if (available.length > 0 && !vehicleId) {
-        setVehicleId(available[0].id);
-        const ask = Number(available[0].asking_price) || 82000;
-        const cost = Number(available[0].purchase_price) || Math.round(ask * 0.88);
-        setSoldPrice(String(ask));
-        setInitialPrice(String(cost));
-      }
+      setComponents(compList);
 
       // Check if booking from an accepted quotation
       const qId = searchParams.get('quotation_id');
@@ -89,10 +123,39 @@ export const OrdersSubPage: React.FC = () => {
         const quotes = await api.getQuotations();
         const quote = quotes.find((q) => q.id === qId);
         if (quote) {
-          if (quote.customer_id) setCustomerId(quote.customer_id);
-          const ask = Number(quote.ex_showroom) || 82000;
-          setSoldPrice(String(ask));
-          setInitialPrice(String(Math.round(ask * 0.88)));
+          const cust = cList.find((c) => c.id === quote.customer_id);
+          if (cust) {
+            setCustomerId(cust.id);
+            setCustomerPhone(cust.phone);
+            setCustomerName(cust.full_name);
+            setCustomerEmail(cust.email || '');
+            setIsExistingCustomer(true);
+          }
+          const v = vList.find((item) => item.id === quote.vehicle_id);
+          if (v) {
+            const ask = Number(quote.ex_showroom) || Number(v.asking_price) || 82000;
+            const cost = Number(v.purchase_price) || Math.round(ask * 0.88);
+            const isRick =
+              v.model_name?.toLowerCase().includes('rickshaw') ||
+              (v as any)?.body_type?.toLowerCase().includes('rickshaw');
+            setCartItems([
+              {
+                id: 'item_' + Date.now(),
+                item_type: 'vehicle',
+                item_id: v.id,
+                name: `${v.brand} ${v.model_name}`,
+                sku_or_vin: v.vin,
+                category: isRick ? 'E-Rickshaw' : 'E-Scooter',
+                quantity: 1,
+                initial_cost_price: cost,
+                mark_price: ask,
+                sold_price: ask,
+                discount: 0,
+                total_amount: ask,
+                total_profit: ask - cost,
+              },
+            ]);
+          }
           setInsuranceCharges(String(quote.insurance || 0));
           setRtoCharges(String(quote.registration || 0));
           setMiscCharges(String((quote.accessories_total || 0) + (quote.handling_charges || 0)));
@@ -111,69 +174,250 @@ export const OrdersSubPage: React.FC = () => {
     loadData();
   }, []);
 
-  const availableVehicles = vehicles.filter(
-    (v) => v.status === 'in_stock' || v.status === 'in_transit'
-  );
+  // Filter available stock strictly: vehicles must be in_stock or in_transit, not already in cart
+  const availableVehicles = vehicles.filter((v) => {
+    const isStatusOk = v.status === 'in_stock' || v.status === 'in_transit';
+    const isNotInCart = !cartItems.some((it) => it.item_id === v.id);
+    return isStatusOk && isNotInCart;
+  });
 
-  const selectedVehicleObj = vehicles.find((v) => v.id === vehicleId);
-  const isRickshawSelected =
-    selectedVehicleObj?.model_name?.toLowerCase().includes('rickshaw') ||
-    (selectedVehicleObj as any)?.body_type?.toLowerCase().includes('rickshaw');
+  // Filter available components strictly: quantity > 0
+  const availableComponents = components.filter((c) => {
+    const alreadyQtyInCart =
+      cartItems
+        .filter((it) => it.item_id === c.id)
+        .reduce((sum, it) => sum + it.quantity, 0);
+    return c.quantity - alreadyQtyInCart > 0;
+  });
 
-  const handleSelectVehicle = (vId: string) => {
-    setVehicleId(vId);
+  // When Vehicle Picker Selection Changes
+  const handleSelectVehicleToPick = (vId: string) => {
+    setPickedVehicleId(vId);
     const v = vehicles.find((item) => item.id === vId);
     if (v) {
       const ask = Number(v.asking_price) || 82000;
       const cost = Number(v.purchase_price) || Math.round(ask * 0.88);
-      setSoldPrice(String(ask));
-      setInitialPrice(String(cost));
+      setVehCostPrice(cost);
+      setVehMarkPrice(ask);
+      setVehSoldPrice(ask);
     }
   };
 
-  // Real-Time Financial Calculations
-  const numSold = parseFloat(soldPrice) || 0;
-  const numInitial = parseFloat(initialPrice) || 0;
-  const numIns = parseFloat(insuranceCharges) || 0;
-  const numRto = parseFloat(rtoCharges) || 0;
+  // When Component Picker Selection Changes
+  const handleSelectComponentToPick = (cId: string) => {
+    setPickedComponentId(cId);
+    const c = components.find((item) => item.id === cId);
+    if (c) {
+      const cost = Number(c.unit_price) || 500;
+      const mrp = Math.round(cost * 1.35); // standard 35% margin mark price
+      setCompCostPrice(cost);
+      setCompMarkPrice(mrp);
+      setCompSoldPrice(mrp);
+      setCompQty(1);
+    }
+  };
+
+  // Customer Phone Lookup Handler
+  const handlePhoneChange = (inputVal: string) => {
+    setCustomerPhone(inputVal);
+    const clean = inputVal.replace(/\D/g, '');
+    if (clean.length >= 4) {
+      const match = customers.find(
+        (c) =>
+          c.phone.replace(/\D/g, '') === clean ||
+          c.phone.trim().toLowerCase() === inputVal.trim().toLowerCase()
+      );
+      if (match) {
+        setCustomerId(match.id);
+        setCustomerName(match.full_name);
+        setCustomerEmail(match.email || '');
+        setIsExistingCustomer(true);
+        return;
+      }
+    }
+    setIsExistingCustomer(false);
+    setCustomerId('');
+  };
+
+  // Add Picked Vehicle to Cart
+  const handleAddVehicleToCart = () => {
+    if (!pickedVehicleId) return;
+    const v = vehicles.find((item) => item.id === pickedVehicleId);
+    if (!v) return;
+
+    const isRick =
+      v.model_name?.toLowerCase().includes('rickshaw') ||
+      (v as any)?.body_type?.toLowerCase().includes('rickshaw');
+
+    const discount = Math.max(0, vehMarkPrice - vehSoldPrice);
+    const totalProfit = vehSoldPrice - vehCostPrice;
+
+    const newItem: OrderItem = {
+      id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      item_type: 'vehicle',
+      item_id: v.id,
+      name: `${v.brand} ${v.model_name}`,
+      sku_or_vin: v.vin,
+      category: isRick ? 'E-Rickshaw' : 'E-Scooter',
+      quantity: 1,
+      initial_cost_price: vehCostPrice,
+      mark_price: vehMarkPrice,
+      sold_price: vehSoldPrice,
+      discount: discount,
+      total_amount: vehSoldPrice,
+      total_profit: totalProfit,
+    };
+
+    setCartItems((prev) => [...prev, newItem]);
+    setPickedVehicleId('');
+    setVehCostPrice(0);
+    setVehMarkPrice(0);
+    setVehSoldPrice(0);
+  };
+
+  // Add Picked Component to Cart
+  const handleAddComponentToCart = () => {
+    if (!pickedComponentId || compQty <= 0) return;
+    const c = components.find((item) => item.id === pickedComponentId);
+    if (!c) return;
+
+    const discountPerUnit = Math.max(0, compMarkPrice - compSoldPrice);
+    const totalProfit = (compSoldPrice - compCostPrice) * compQty;
+    const totalAmount = compSoldPrice * compQty;
+
+    const newItem: OrderItem = {
+      id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      item_type: 'component',
+      item_id: c.id,
+      name: c.name,
+      sku_or_vin: c.sku,
+      category: c.category,
+      quantity: compQty,
+      initial_cost_price: compCostPrice,
+      mark_price: compMarkPrice,
+      sold_price: compSoldPrice,
+      discount: discountPerUnit * compQty,
+      total_amount: totalAmount,
+      total_profit: totalProfit,
+    };
+
+    setCartItems((prev) => [...prev, newItem]);
+    setPickedComponentId('');
+    setCompQty(1);
+    setCompCostPrice(0);
+    setCompMarkPrice(0);
+    setCompSoldPrice(0);
+  };
+
+  const handleRemoveCartItem = (itemId: string) => {
+    setCartItems((prev) => prev.filter((it) => it.id !== itemId));
+  };
+
+  // Real-Time Aggregate Financial Calculations
+  const hasVehicleInCart = cartItems.some((it) => it.item_type === 'vehicle');
+  const cartSoldTotal = cartItems.reduce((sum, it) => sum + it.sold_price * it.quantity, 0);
+  const cartCostTotal = cartItems.reduce((sum, it) => sum + it.initial_cost_price * it.quantity, 0);
+  const cartDiscountTotal = cartItems.reduce((sum, it) => sum + it.discount, 0);
+
+  const numIns = hasVehicleInCart ? parseFloat(insuranceCharges) || 0 : 0;
+  const numRto = hasVehicleInCart ? parseFloat(rtoCharges) || 0 : 0;
   const numMisc = parseFloat(miscCharges) || 0;
-  const numSub = parseFloat(subsidyDiscount) || 0;
-  const numAdvance = parseFloat(bookingAmount) || 0;
+  const numSub = hasVehicleInCart ? parseFloat(subsidyDiscount) || 0 : 0;
 
-  // Invoiced Total = Sold Price + Insurance + RTO + Misc - Subsidy
-  const computedTotalBill = Math.max(0, numSold + numIns + numRto + numMisc - numSub);
-  // Net Dealer Profit = (Sold Price - Initial Cost) + Misc Charges
-  const computedProfit = (numSold - numInitial) + numMisc;
-  const computedMarginPct = numSold > 0 ? ((computedProfit / numSold) * 100).toFixed(1) : '0';
-  const computedBalanceDue = Math.max(0, computedTotalBill - numAdvance);
+  // Invoiced Total = Items Sold + Insurance + RTO + Misc - Subsidy
+  const computedTotalBill = Math.max(0, cartSoldTotal + numIns + numRto + numMisc - numSub);
+  // Net Dealer Profit = (Items Sold - Dealer Cost) + Misc Charges
+  const computedNetProfit = cartSoldTotal - cartCostTotal + numMisc;
+  const computedMarginPct =
+    cartSoldTotal > 0 ? ((computedNetProfit / cartSoldTotal) * 100).toFixed(1) : '0';
 
-  const handleBookVehicle = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vehicleId) {
-      alert('Please select an available physical vehicle.');
+  const advanceVal = bookingAmount !== '' ? parseFloat(bookingAmount) || 0 : computedTotalBill;
+  const computedBalanceDue = Math.max(0, computedTotalBill - advanceVal);
+
+  // Reset Modal Form
+  const resetFormState = () => {
+    setCartItems([]);
+    setCustomerPhone('');
+    setCustomerName('');
+    setCustomerEmail('');
+    setCustomerId('');
+    setIsExistingCustomer(false);
+    setPickedVehicleId('');
+    setPickedComponentId('');
+    setBookingAmount('');
+    setPaymentMode('cash');
+    setInsuranceCharges('3500');
+    setRtoCharges('4500');
+    setMiscCharges('1500');
+    setSubsidyDiscount('0');
+  };
+
+  // Open Modal with first available vehicle
+  const handleOpenModal = () => {
+    resetFormState();
+    setShowBookModal(true);
+    if (availableVehicles.length > 0) {
+      handleSelectVehicleToPick(availableVehicles[0].id);
+    }
+  };
+
+  // Submit Sale Handler
+  const handleRecordSale = async (keepOpen = false) => {
+    if (cartItems.length === 0) {
+      alert('Cart is empty. Please select and add at least one vehicle or component from in-stock inventory.');
       return;
     }
+    if (!customerPhone.trim()) {
+      alert('Please enter customer mobile number.');
+      return;
+    }
+    if (!customerName.trim()) {
+      alert('Please enter customer full name.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await api.createOrder({
-        customer_id: customerId,
-        vehicle_id: vehicleId,
+      const primaryVeh = cartItems.find((it) => it.item_type === 'vehicle');
+
+      const created = await api.createOrder({
+        customer_id: customerId || undefined,
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        customer_email: customerEmail.trim() || undefined,
+        vehicle_id: primaryVeh?.item_id,
+        items: cartItems,
         sale_date: saleDate,
-        booking_amount: numAdvance,
-        initial_price: numInitial,
-        sold_price: numSold,
+        booking_amount: advanceVal,
+        initial_price: cartCostTotal,
+        sold_price: cartSoldTotal,
         insurance_charges: numIns,
         rto_charges: numRto,
         miscellaneous_charges: numMisc,
         subsidy_discount: numSub,
         payment_mode: paymentMode,
         finance_partner: paymentMode === 'finance' ? financePartner : undefined,
-        loan_amount: paymentMode === 'finance' ? parseFloat(loanAmount) : undefined,
+        loan_amount: paymentMode === 'finance' ? parseFloat(loanAmount) || 0 : undefined,
         expected_delivery: deliveryDate,
       });
-      setShowBookModal(false);
-      loadData();
+
+      await loadData();
+
+      if (keepOpen) {
+        setSuccessToast(`✓ Sale ${created.order_number} recorded! Ready for next sale.`);
+        setTimeout(() => setSuccessToast(null), 4000);
+        resetFormState();
+        if (availableVehicles.length > 0) {
+          handleSelectVehicleToPick(availableVehicles[0].id);
+        }
+      } else {
+        setShowBookModal(false);
+        resetFormState();
+      }
     } catch (err: any) {
-      alert(err.message || 'Double-selling prevented or error booking vehicle');
+      alert(err.message || 'Failed to record sale. Please check inventory stock.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -182,25 +426,55 @@ export const OrdersSubPage: React.FC = () => {
     return o.status === statusFilter;
   });
 
-  // Calculate high-level summary metrics
-  const totalScooters = orders.filter(
-    (o) => o.vehicle_type === 'scooter' || !o.model_name?.toLowerCase().includes('rickshaw')
-  ).length;
-  const totalRickshaws = orders.filter(
-    (o) => o.vehicle_type === 'rickshaw' || o.model_name?.toLowerCase().includes('rickshaw')
-  ).length;
+  // Summary Metrics
+  const totalScooters = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      return (
+        sum +
+        o.items
+          .filter((it) => it.item_type === 'vehicle' && it.category === 'E-Scooter')
+          .reduce((s, it) => s + it.quantity, 0)
+      );
+    }
+    const isRick =
+      o.vehicle_type === 'rickshaw' || o.model_name?.toLowerCase().includes('rickshaw');
+    return sum + (isRick ? 0 : 1);
+  }, 0);
+
+  const totalRickshaws = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      return (
+        sum +
+        o.items
+          .filter((it) => it.item_type === 'vehicle' && it.category === 'E-Rickshaw')
+          .reduce((s, it) => s + it.quantity, 0)
+      );
+    }
+    const isRick =
+      o.vehicle_type === 'rickshaw' || o.model_name?.toLowerCase().includes('rickshaw');
+    return sum + (isRick ? 1 : 0);
+  }, 0);
+
+  const totalComponents = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      return (
+        sum +
+        o.items
+          .filter((it) => it.item_type === 'component')
+          .reduce((s, it) => s + it.quantity, 0)
+      );
+    }
+    return sum + (o.component_count || 0);
+  }, 0);
+
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
-  const totalProfit = orders.reduce(
-    (sum, o) =>
-      sum +
-      Number(
-        o.net_profit !== undefined
-          ? o.net_profit
-          : (Number(o.sold_price || o.total_amount) - Number(o.initial_price || 0)) +
-              Number(o.miscellaneous_charges || 0)
-      ),
-    0
-  );
+  const totalProfit = orders.reduce((sum, o) => {
+    if (o.net_profit !== undefined) return sum + Number(o.net_profit);
+    const sold = Number(o.sold_price || o.total_amount);
+    const init = Number(o.initial_price || Math.round(sold * 0.88));
+    const misc = Number(o.miscellaneous_charges || 0);
+    return sum + (sold - init + misc);
+  }, 0);
 
   // Timeline list (sorted descending to show latest days first)
   const timelineDays = [...dailySales].reverse();
@@ -210,43 +484,37 @@ export const OrdersSubPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Subpage Header & Quick Metrics */}
+      {/* Subpage Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
             <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-              Day-Wise Sales & Booking Tracker
+              Day-Wise Sales & Retail Counter Engine
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700">
-              {orders.length} total sales
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-100 text-brand-800">
+              {orders.length} transactions
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Continuous daily sales mapping: track daily sales volume of Scooters and Rickshaws with revenue and profit.
+            Continuous daily sales mapping: record customer walk-in checkout with multi-item bargaining, inventory stock protection, and transparent dealer profit margins.
           </p>
         </div>
 
         <button
-          onClick={() => {
-            setShowBookModal(true);
-            const available = vehicles.filter((v) => v.status === 'in_stock' || v.status === 'in_transit');
-            if (available.length > 0 && !vehicleId) {
-              handleSelectVehicle(available[0].id);
-            }
-          }}
+          onClick={handleOpenModal}
           className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 shadow-sm transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4 mr-1.5" />
-          <span>Record Daily Sale / Booking</span>
+          <span>New Retail Sale / Counter POS</span>
         </button>
       </div>
 
-      {/* Top 4 Real-Time Summary Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+      {/* Top 5 Real-Time Summary Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {/* Card 1: Scooties Sold */}
         <div className="p-3.5 bg-white rounded-2xl border border-emerald-100 shadow-sm">
           <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
-            <span>🛵 Scooties Sold (2W)</span>
+            <span>🛵 Scooties (2W)</span>
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
           </div>
           <div className="text-2xl font-black text-slate-900 mt-1">{totalScooters} Units</div>
@@ -256,27 +524,37 @@ export const OrdersSubPage: React.FC = () => {
         {/* Card 2: E-Rickshaws Sold */}
         <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-sm">
           <div className="flex items-center justify-between text-xs font-bold text-sky-800">
-            <span>🛺 E-Rickshaws (3W)</span>
+            <span>🛺 Rickshaws (3W)</span>
             <span className="w-2 h-2 rounded-full bg-sky-500" />
           </div>
           <div className="text-2xl font-black text-slate-900 mt-1">{totalRickshaws} Units</div>
           <div className="text-[11px] text-slate-500 mt-0.5">Commercial 5-Seater L5M</div>
         </div>
 
-        {/* Card 3: Total Sales Invoiced */}
+        {/* Card 3: Spares & Accessories Sold */}
+        <div className="p-3.5 bg-white rounded-2xl border border-purple-100 shadow-sm">
+          <div className="flex items-center justify-between text-xs font-bold text-purple-800">
+            <span>⚙️ Spares & Accs</span>
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-1">{totalComponents} Pcs</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">Batteries, Chargers, Spares</div>
+        </div>
+
+        {/* Card 4: Total Revenue */}
         <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-            <span>Total Sales Revenue</span>
+            <span>Invoiced Revenue</span>
             <DollarSign className="w-3.5 h-3.5 text-slate-400" />
           </div>
           <div className="text-2xl font-black text-sky-800 mt-1">
             ₹{totalRevenue.toLocaleString('en-IN')}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Cumulative customer invoices</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">Cumulative sales billed</div>
         </div>
 
-        {/* Card 4: Net Dealer Profit */}
-        <div className="p-3.5 bg-white rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm">
+        {/* Card 5: Net Dealer Profit */}
+        <div className="p-3.5 bg-white rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
             <span>Net Dealer Profit</span>
             <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
@@ -284,15 +562,15 @@ export const OrdersSubPage: React.FC = () => {
           <div className="text-2xl font-black text-emerald-700 mt-1">
             +₹{totalProfit.toLocaleString('en-IN')}
           </div>
-          <div className="text-[11px] text-emerald-800 mt-0.5 font-semibold">
-            {totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0}% Overall Margin
+          <div className="text-[11px] text-emerald-800 mt-0.5">
+            {totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0}% Net Margin
           </div>
         </div>
       </div>
 
-      {/* View Switcher: Day-by-Day Timeline vs All Transactions Table */}
+      {/* View Mode Toggle & Status Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center space-x-1.5 p-1 bg-slate-100 rounded-xl">
+        <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl">
           <button
             onClick={() => setViewMode('daily_timeline')}
             className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -404,6 +682,7 @@ export const OrdersSubPage: React.FC = () => {
                             {hasSales ? (
                               <span>
                                 🛵 {day.scooter_units} Scooties • 🛺 {day.rickshaw_units} E-Rickshaws
+                                {day.component_units ? ` • ⚙️ ${day.component_units} Spares/Accs` : ''}
                               </span>
                             ) : (
                               <span>Showroom open • No vehicle dispatches on this date</span>
@@ -437,7 +716,7 @@ export const OrdersSubPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Expandable Cards for Continuous Sales on this Day */}
+                    {/* Continuous Customer Sales on this Day */}
                     {hasSales && day.orders.length > 0 && (
                       <div className="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-2.5">
                         {day.orders.map((o) => {
@@ -447,48 +726,92 @@ export const OrdersSubPage: React.FC = () => {
                           const sold = Number(o.sold_price !== undefined ? o.sold_price : (o.total_amount || 0));
                           const init = Number(o.initial_price !== undefined ? o.initial_price : Math.round(sold * 0.88));
                           const misc = Number(o.miscellaneous_charges || 0);
-                          const prof = Number(o.net_profit !== undefined ? o.net_profit : ((sold - init) + misc));
+                          const prof = Number(o.net_profit !== undefined ? o.net_profit : (sold - init + misc));
+                          const margin = sold > 0 ? ((prof / sold) * 100).toFixed(1) : '0';
 
                           return (
                             <div
                               key={o.id}
-                              className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 transition-all flex items-center justify-between text-xs"
+                              className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:border-brand-200 transition-all text-xs"
                             >
-                              <div className="space-y-0.5">
-                                <div className="flex items-center space-x-1.5">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="font-bold text-slate-900">{o.customer_name}</span>
+                                    <span className="text-[10px] text-slate-400">({o.customer_phone})</span>
+                                  </div>
+                                  <div className="font-mono text-[10px] text-slate-500 mt-0.5">
+                                    {o.order_number}
+                                  </div>
+                                </div>
+
+                                <div className="text-right">
+                                  <div className="font-mono font-black text-emerald-700 text-xs">
+                                    +₹{prof.toLocaleString('en-IN')}
+                                  </div>
+                                  <span className="inline-block text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
+                                    {margin}% profit
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Multi-Item Breakdown Pills */}
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {o.items && o.items.length > 0 ? (
+                                  o.items.map((it) => (
+                                    <span
+                                      key={it.id}
+                                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                                        it.item_type === 'vehicle'
+                                          ? it.category === 'E-Rickshaw'
+                                            ? 'bg-sky-100 text-sky-800'
+                                            : 'bg-emerald-100 text-emerald-800'
+                                          : 'bg-purple-100 text-purple-800'
+                                      }`}
+                                    >
+                                      {it.item_type === 'vehicle' ? (
+                                        it.category === 'E-Rickshaw' ? '🛺' : '🛵'
+                                      ) : (
+                                        '⚙️'
+                                      )}{' '}
+                                      {it.quantity}x {it.name}
+                                    </span>
+                                  ))
+                                ) : (
                                   <span
-                                    className={`px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
+                                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                                       isRick
                                         ? 'bg-sky-100 text-sky-800'
                                         : 'bg-emerald-100 text-emerald-800'
                                     }`}
                                   >
-                                    {isRick ? '🛺 E-Rickshaw' : '🛵 Scooty'}
+                                    {isRick ? '🛺 1x' : '🛵 1x'} {o.brand} {o.model_name}
                                   </span>
-                                  <span className="font-bold text-slate-900">
-                                    {o.brand} {o.model_name}
-                                  </span>
-                                </div>
-                                <div className="text-[11px] text-slate-600">
-                                  Buyer: <strong className="text-slate-800">{o.customer_name}</strong> • VIN: {o.vin}
-                                </div>
+                                )}
                               </div>
 
-                              <div className="text-right flex items-center space-x-3">
+                              {/* Card Footer Financial Summary */}
+                              <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
                                 <div>
-                                  <div className="font-mono font-black text-slate-900 text-xs">
+                                  <span className="text-slate-400">Total Bill: </span>
+                                  <span className="font-mono font-bold text-slate-800">
                                     ₹{o.total_amount.toLocaleString('en-IN')}
-                                  </div>
-                                  <div className="font-mono text-[10px] font-bold text-emerald-700">
-                                    +₹{prof.toLocaleString('en-IN')}
-                                  </div>
+                                  </span>
+                                  {o.balance_due > 0 ? (
+                                    <span className="ml-2 font-bold text-sky-700">
+                                      (₹{o.balance_due.toLocaleString('en-IN')} due)
+                                    </span>
+                                  ) : (
+                                    <span className="ml-2 font-semibold text-emerald-600">✓ Settled</span>
+                                  )}
                                 </div>
+
                                 <Link
                                   to={`/crm/sales?tab=orders&order_id=${o.id}`}
-                                  className="p-1.5 rounded-lg bg-white border border-slate-200 text-brand-600 hover:bg-brand-50 shadow-sm"
-                                  title="View Invoice & Ledger"
+                                  className="text-brand-600 hover:text-brand-800 font-bold text-[10px] flex items-center"
                                 >
-                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>View Ledger</span>
+                                  <Eye className="w-3 h-3 ml-1" />
                                 </Link>
                               </div>
                             </div>
@@ -514,7 +837,7 @@ export const OrdersSubPage: React.FC = () => {
               <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-40" />
               <p className="font-semibold text-slate-700">No sales transactions found</p>
               <p className="text-xs text-slate-500 mt-1">
-                Click "Record Daily Sale" to book a vehicle with complete cost accounting.
+                Click "New Retail Sale" to record a sale with complete cost accounting.
               </p>
             </div>
           ) : (
@@ -522,11 +845,10 @@ export const OrdersSubPage: React.FC = () => {
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="py-3 px-4">Sale Date / Order</th>
-                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Date / Order</th>
                     <th className="py-3 px-4">Customer</th>
-                    <th className="py-3 px-4">Allocated Vehicle</th>
-                    <th className="py-3 px-4">Initial Cost</th>
+                    <th className="py-3 px-4">Purchased Items</th>
+                    <th className="py-3 px-4">Dealer Cost</th>
                     <th className="py-3 px-4">Sold Price</th>
                     <th className="py-3 px-4 text-sky-800">Total Invoice</th>
                     <th className="py-3 px-4 text-emerald-800">Net Profit</th>
@@ -537,13 +859,10 @@ export const OrdersSubPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((o) => {
-                    const isRick =
-                      o.vehicle_type === 'rickshaw' ||
-                      o.model_name?.toLowerCase().includes('rickshaw');
                     const sold = Number(o.sold_price !== undefined ? o.sold_price : (o.total_amount || 0));
                     const init = Number(o.initial_price !== undefined ? o.initial_price : Math.round(sold * 0.88));
                     const misc = Number(o.miscellaneous_charges || 0);
-                    const profit = Number(o.net_profit !== undefined ? o.net_profit : ((sold - init) + misc));
+                    const profit = Number(o.net_profit !== undefined ? o.net_profit : (sold - init + misc));
                     const marginPct = sold > 0 ? ((profit / sold) * 100).toFixed(1) : '0';
 
                     return (
@@ -556,28 +875,24 @@ export const OrdersSubPage: React.FC = () => {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                              isRick
-                                ? 'bg-sky-50 text-sky-800 border border-sky-200'
-                                : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                            }`}
-                          >
-                            {isRick ? '🛺 Rickshaw' : '🛵 Scooty'}
-                          </span>
-                        </td>
-
-                        <td className="py-3.5 px-4">
                           <div className="font-bold text-slate-900">{o.customer_name}</div>
                           <div className="text-slate-500 text-[11px]">{o.customer_phone}</div>
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-800">
-                            {o.brand} {o.model_name}
+                          <div className="flex flex-col gap-1 max-w-[200px]">
+                            {o.items && o.items.length > 0 ? (
+                              o.items.map((it) => (
+                                <div key={it.id} className="text-[11px] text-slate-700 truncate">
+                                  <span className="font-bold text-slate-900">{it.quantity}x</span> {it.name}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-[11px] text-slate-800 font-medium">
+                                {o.brand} {o.model_name}
+                              </div>
+                            )}
                           </div>
-                          <div className="text-slate-500 text-[11px]">{o.colour}</div>
-                          <div className="font-mono text-[10px] text-slate-400">VIN: {o.vin}</div>
                         </td>
 
                         <td className="py-3.5 px-4 font-mono text-slate-600">
@@ -649,273 +964,587 @@ export const OrdersSubPage: React.FC = () => {
         </div>
       )}
 
-      {/* Book Vehicle Modal with Exact Sale Date & Scooter/Rickshaw Support */}
+      {/* ========================================================================= */}
+      {/* SHOWROOM POS RETAIL CHECKOUT MODAL (Mall Counter Customer Sale Experience) */}
+      {/* ========================================================================= */}
       {showBookModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 my-8">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center space-x-2">
-                <Lock className="w-5 h-5 text-brand-600" />
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-100 my-6 max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
+                  <ShoppingBag className="w-4 h-4" />
+                </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-lg">Record Vehicle Sale by Date</h3>
-                  <p className="text-xs text-slate-500">
-                    Log Scooters or E-Rickshaws sold on specific calendar days with transparent profit accounting.
+                  <h3 className="font-extrabold text-slate-900 text-base">
+                    Showroom POS Retail Checkout
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Mall-style counter sale: lookup customer by mobile, pick available in-stock inventory, apply bargained price & auto-calculate dealer profit.
                   </p>
                 </div>
               </div>
-              <button onClick={() => setShowBookModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setShowBookModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleBookVehicle} className="mt-4 space-y-4 text-xs">
-              {/* Sale Date & Vehicle Category Indicator */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-brand-50/50 rounded-xl border border-brand-200/60">
-                <div>
-                  <label className="block font-bold text-brand-900 mb-1">Sale / Booking Date *</label>
-                  <input
-                    type="date"
-                    value={saleDate}
-                    onChange={(e) => setSaleDate(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-brand-300 rounded-xl font-mono font-bold bg-white text-brand-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                    required
-                  />
-                  <span className="text-[10px] text-slate-500">Maps to daily sales ledger</span>
+            {/* Toast Notification if Logging Multiple Sales */}
+            {successToast && (
+              <div className="mt-3 p-2.5 bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold rounded-xl flex items-center space-x-2 animate-fadeIn">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>{successToast}</span>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto py-3 space-y-4 text-xs pr-1">
+              {/* SECTION 1: MALL CUSTOMER LOOKUP & REGISTRATION */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 font-bold text-slate-800">
+                    <User className="w-4 h-4 text-brand-600" />
+                    <span>Customer Details (Counter Lookup)</span>
+                  </div>
+                  {isExistingCustomer ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      ✓ Existing Customer Found
+                    </span>
+                  ) : customerPhone.length >= 4 ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                      + New Customer (Auto-registers)
+                    </span>
+                  ) : null}
                 </div>
 
-                <div className="sm:col-span-2 flex flex-col justify-center">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase">Detected Vehicle Category</span>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <span
-                      className={`px-3 py-1 rounded-xl text-xs font-black uppercase shadow-sm ${
-                        isRickshawSelected
-                          ? 'bg-sky-600 text-white'
-                          : 'bg-emerald-600 text-white'
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      Customer Phone Number *
+                    </label>
+                    <div className="relative">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        value={customerPhone}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        placeholder="e.g. 9876543210"
+                        className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-400">Type phone to instant auto-fill</span>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Customer Full Name *</label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="e.g. Rajesh Sharma"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Sale Date *</label>
+                    <input
+                      type="date"
+                      value={saleDate}
+                      onChange={(e) => setSaleDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      required
+                    />
+                    <span className="text-[10px] text-slate-400">Maps to day-wise sales timeline</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: INVENTORY ITEM PICKER (STRICTLY IN-STOCK ONLY) */}
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center space-x-2">
+                    <Package className="w-4 h-4 text-brand-600" />
+                    <span className="font-bold text-slate-900">Select Available Inventory</span>
+                  </div>
+                  <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setPickerTab('vehicle')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        pickerTab === 'vehicle'
+                          ? 'bg-white text-brand-700 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      {isRickshawSelected ? '🛺 Commercial E-Rickshaw (3W)' : '🛵 Personal EV Scooty (2W)'}
+                      🛵 Vehicles ({availableVehicles.length} in stock)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPickerTab('component')}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        pickerTab === 'component'
+                          ? 'bg-white text-brand-700 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      ⚙️ Components & Spares ({availableComponents.length} in stock)
+                    </button>
+                  </div>
+                </div>
+
+                {/* TAB 1: VEHICLES IN STOCK */}
+                {pickerTab === 'vehicle' && (
+                  <div className="space-y-3">
+                    {availableVehicles.length === 0 ? (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-center font-medium">
+                        ⚠️ No vehicles available in physical inventory! Please procure vehicles in the Inventory tab first.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="sm:col-span-2">
+                            <label className="block font-bold text-slate-700 mb-1">
+                              Select Physical Vehicle by VIN *
+                            </label>
+                            <select
+                              value={pickedVehicleId}
+                              onChange={(e) => handleSelectVehicleToPick(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                            >
+                              <option value="">-- Choose in-stock vehicle to sell --</option>
+                              {availableVehicles.map((v) => (
+                                <option key={v.id} value={v.id}>
+                                  {v.brand} {v.model_name} ({v.colour}) — VIN: {v.vin} [Cost: ₹{v.purchase_price} | MRP: ₹{v.asking_price}]
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {pickedVehicleId && (
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
+                            <div>
+                              <span className="block text-[10px] font-bold text-slate-500 uppercase">
+                                Dealer Initial Cost
+                              </span>
+                              <div className="font-mono font-bold text-slate-700 text-sm mt-0.5">
+                                ₹{vehCostPrice.toLocaleString('en-IN')}
+                              </div>
+                              <span className="text-[10px] text-slate-400">Capital invested</span>
+                            </div>
+
+                            <div>
+                              <span className="block text-[10px] font-bold text-slate-500 uppercase">
+                                Showroom MRP
+                              </span>
+                              <div className="font-mono font-bold text-slate-700 text-sm mt-0.5">
+                                ₹{vehMarkPrice.toLocaleString('en-IN')}
+                              </div>
+                              <span className="text-[10px] text-slate-400">Mark price</span>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-900 uppercase mb-0.5">
+                                Agreed Sold Price (₹) *
+                              </label>
+                              <input
+                                type="number"
+                                value={vehSoldPrice}
+                                onChange={(e) => setVehSoldPrice(Number(e.target.value) || 0)}
+                                className="w-full px-2.5 py-1.5 border border-brand-300 rounded-lg font-mono font-bold text-slate-900 bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                              />
+                              <span className="text-[10px] text-slate-500">
+                                {vehMarkPrice > vehSoldPrice
+                                  ? `Bargained Discount: -₹${(vehMarkPrice - vehSoldPrice).toLocaleString('en-IN')}`
+                                  : 'Full price'}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={handleAddVehicleToCart}
+                              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-1 cursor-pointer transition-all"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add Vehicle to Sale</span>
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: COMPONENTS & SPARES IN STOCK */}
+                {pickerTab === 'component' && (
+                  <div className="space-y-3">
+                    {availableComponents.length === 0 ? (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-center font-medium">
+                        ⚠️ No components or spares with positive stock! Please procure components in the Inventory tab first.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="sm:col-span-2">
+                            <label className="block font-bold text-slate-700 mb-1">
+                              Select In-Stock Component / Spare *
+                            </label>
+                            <select
+                              value={pickedComponentId}
+                              onChange={(e) => handleSelectComponentToPick(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                            >
+                              <option value="">-- Choose in-stock spare/accessory to sell --</option>
+                              {availableComponents.map((c) => {
+                                const inCart = cartItems
+                                  .filter((it) => it.item_id === c.id)
+                                  .reduce((s, it) => s + it.quantity, 0);
+                                const left = c.quantity - inCart;
+                                return (
+                                  <option key={c.id} value={c.id}>
+                                    {c.name} ({c.category}) — SKU: {c.sku} [Available: {left} pcs | Unit Cost: ₹{c.unit_price}]
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block font-bold text-slate-700 mb-1">Quantity to Sell *</label>
+                            <input
+                              type="number"
+                              min="1"
+                              max={
+                                components.find((c) => c.id === pickedComponentId)?.quantity || 1
+                              }
+                              value={compQty}
+                              onChange={(e) => setCompQty(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                            />
+                            <span className="text-[10px] text-slate-400">Max capped at stock</span>
+                          </div>
+                        </div>
+
+                        {pickedComponentId && (
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-end">
+                            <div>
+                              <span className="block text-[10px] font-bold text-slate-500 uppercase">
+                                Unit Initial Cost
+                              </span>
+                              <div className="font-mono font-bold text-slate-700 text-sm mt-0.5">
+                                ₹{compCostPrice.toLocaleString('en-IN')}
+                              </div>
+                              <span className="text-[10px] text-slate-400">Total: ₹{(compCostPrice * compQty).toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <div>
+                              <span className="block text-[10px] font-bold text-slate-500 uppercase">
+                                Suggested MRP
+                              </span>
+                              <div className="font-mono font-bold text-slate-700 text-sm mt-0.5">
+                                ₹{compMarkPrice.toLocaleString('en-IN')}
+                              </div>
+                              <span className="text-[10px] text-slate-400">Mark price</span>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-900 uppercase mb-0.5">
+                                Sold Price / Unit (₹) *
+                              </label>
+                              <input
+                                type="number"
+                                value={compSoldPrice}
+                                onChange={(e) => setCompSoldPrice(Number(e.target.value) || 0)}
+                                className="w-full px-2.5 py-1.5 border border-brand-300 rounded-lg font-mono font-bold text-slate-900 bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                              />
+                              <span className="text-[10px] text-slate-500">
+                                Profit: +₹{((compSoldPrice - compCostPrice) * compQty).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={handleAddComponentToCart}
+                              className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center space-x-1 cursor-pointer transition-all"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add Spare to Sale</span>
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 3: CURRENT CUSTOMER BILL ITEMS (CART) */}
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                <div className="px-3.5 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between font-bold text-slate-800">
+                  <div className="flex items-center space-x-2">
+                    <Receipt className="w-4 h-4 text-brand-600" />
+                    <span>Customer Bill Items ({cartItems.length})</span>
+                  </div>
+                  {cartItems.length > 0 && (
+                    <span className="text-[11px] font-extrabold text-brand-700">
+                      Total Items: ₹{cartSoldTotal.toLocaleString('en-IN')}
                     </span>
-                    <span className="text-slate-600 text-[11px]">
-                      {selectedVehicleObj?.brand} {selectedVehicleObj?.model_name}
-                    </span>
-                  </div>
+                  )}
                 </div>
+
+                {cartItems.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400">
+                    <ShoppingBag className="w-8 h-8 mx-auto mb-1.5 opacity-30" />
+                    <p className="font-semibold text-slate-600 text-xs">No items added to this sale yet</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Select in-stock vehicles or components above to build the customer's purchase.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase">
+                          <th className="py-2 px-3">Item Description</th>
+                          <th className="py-2 px-3 text-center">Qty</th>
+                          <th className="py-2 px-3 text-right">Dealer Cost</th>
+                          <th className="py-2 px-3 text-right">MRP</th>
+                          <th className="py-2 px-3 text-right">Sold Price</th>
+                          <th className="py-2 px-3 text-right">Subtotal</th>
+                          <th className="py-2 px-3 text-right text-emerald-700">Dealer Profit</th>
+                          <th className="py-2 px-3 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {cartItems.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50/70">
+                            <td className="py-2.5 px-3">
+                              <div className="font-bold text-slate-900">{item.name}</div>
+                              <div className="font-mono text-[10px] text-slate-400">
+                                {item.item_type === 'vehicle' ? `VIN: ${item.sku_or_vin}` : `SKU: ${item.sku_or_vin}`}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-bold text-slate-800">
+                              {item.quantity}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono text-slate-600">
+                              ₹{(item.initial_cost_price * item.quantity).toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono text-slate-500">
+                              ₹{(item.mark_price * item.quantity).toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                              ₹{(item.sold_price * item.quantity).toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-sky-800">
+                              ₹{item.total_amount.toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono font-black text-emerald-700">
+                              +₹{item.total_profit.toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCartItem(item.id)}
+                                className="text-rose-500 hover:text-rose-700 p-1 hover:bg-rose-50 rounded"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
-              {/* Customer & Vehicle Selection */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Customer *</label>
-                  <select
-                    value={customerId}
-                    onChange={(e) => setCustomerId(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                    required
-                  >
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.full_name} ({c.phone})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Allocate Physical Stock (VIN) *
-                  </label>
-                  <select
-                    value={vehicleId}
-                    onChange={(e) => handleSelectVehicle(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                    required
-                  >
-                    {availableVehicles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.brand} {v.model_name} ({v.colour}) — {v.vin}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Price & Cost Structure Section */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                <div className="flex items-center space-x-2 text-slate-800 font-bold">
-                  <Calculator className="w-4 h-4 text-brand-600" />
-                  <span>Cost Accounting & Pricing Inputs</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Initial Purchase Price / Dealer Cost (₹) *
-                    </label>
-                    <input
-                      type="number"
-                      value={initialPrice}
-                      onChange={(e) => setInitialPrice(e.target.value)}
-                      placeholder="e.g. 72000"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                      required
-                    />
-                    <span className="text-[10px] text-slate-500">Capital invested by showroom to acquire unit</span>
+              {/* SECTION 4: SHOWROOM CHARGES & PASS-THROUGHS (INSURANCE, RTO, MISC) */}
+              {hasVehicleInCart && (
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="flex items-center space-x-2 text-slate-800 font-bold">
+                    <ShieldCheck className="w-4 h-4 text-brand-600" />
+                    <span>Vehicle Showroom Charges & Direct Fees</span>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Agreed Sold Price to Customer (₹) *
-                    </label>
-                    <input
-                      type="number"
-                      value={soldPrice}
-                      onChange={(e) => setSoldPrice(e.target.value)}
-                      placeholder="e.g. 85000"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                      required
-                    />
-                    <span className="text-[10px] text-slate-500">Base ex-showroom agreed vehicle rate</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        Insurance Charges (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={insuranceCharges}
+                        onChange={(e) => setInsuranceCharges(e.target.value)}
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-xl font-mono text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      />
+                      <span className="text-[10px] text-slate-400">5-Yr comprehensive</span>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        RTO & Reg Charges (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={rtoCharges}
+                        onChange={(e) => setRtoCharges(e.target.value)}
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-xl font-mono text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      />
+                      <span className="text-[10px] text-slate-400">Road tax & HSRP</span>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        Misc / Doc Fee (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={miscCharges}
+                        onChange={(e) => setMiscCharges(e.target.value)}
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-xl font-mono text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      />
+                      <span className="text-[10px] text-slate-400">Dealer profit addition</span>
+                    </div>
+
+                    <div>
+                      <label className="block font-semibold text-slate-700 mb-1">
+                        EV Subsidy Discount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        value={subsidyDiscount}
+                        onChange={(e) => setSubsidyDiscount(e.target.value)}
+                        className="w-full px-2.5 py-1.5 border border-slate-300 rounded-xl font-mono text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      />
+                      <span className="text-[10px] text-slate-400">Direct incentive deduct</span>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                {/* Additional Direct Charges: Insurance, RTO, Misc */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200/80">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Insurance Charges (₹)
-                    </label>
-                    <input
-                      type="number"
-                      value={insuranceCharges}
-                      onChange={(e) => setInsuranceCharges(e.target.value)}
-                      placeholder="e.g. 3500"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                    />
-                    <span className="text-[10px] text-slate-500">Pass-through policy premium</span>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      RTO & Registration Charges (₹)
-                    </label>
-                    <input
-                      type="number"
-                      value={rtoCharges}
-                      onChange={(e) => setRtoCharges(e.target.value)}
-                      placeholder="e.g. 4500"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                    />
-                    <span className="text-[10px] text-slate-500">RTO number plate fee</span>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Miscellaneous Charges (₹)
-                    </label>
-                    <input
-                      type="number"
-                      value={miscCharges}
-                      onChange={(e) => setMiscCharges(e.target.value)}
-                      placeholder="e.g. 1500"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                    />
-                    <span className="text-[10px] text-slate-500">Doc & handling fee (Dealer Profit)</span>
-                  </div>
-                </div>
-
-                {/* Subsidy / Discount */}
-                <div className="pt-2 border-t border-slate-200/80">
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    State / Central EV Subsidy Discount (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={subsidyDiscount}
-                    onChange={(e) => setSubsidyDiscount(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Real-Time Calculation Card */}
-              <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+              {/* SECTION 5: LIVE FINANCIAL SUMMARY CARD */}
+              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
                 <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60">
-                  <span className="font-bold text-emerald-900 text-xs">Live Financial Calculation</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-200 text-emerald-800">
-                    Real-Time
+                  <span className="font-bold text-emerald-900 text-xs">Live Financial Breakdown</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-200 text-emerald-800 uppercase">
+                    Auto-Calculated
                   </span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-3 text-center">
                   <div>
-                    <div className="text-[10px] text-emerald-800 font-semibold uppercase">Total Customer Invoice</div>
+                    <div className="text-[10px] text-emerald-800 font-semibold uppercase">Total Customer Bill</div>
                     <div className="text-base font-black text-sky-800 mt-0.5">
                       ₹{computedTotalBill.toLocaleString('en-IN')}
                     </div>
                   </div>
                   <div>
+                    <div className="text-[10px] text-emerald-800 font-semibold uppercase">Dealer Cost Outlay</div>
+                    <div className="text-base font-black text-slate-700 mt-0.5">
+                      ₹{cartCostTotal.toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-emerald-800 font-semibold uppercase">Bargain Discount</div>
+                    <div className="text-base font-black text-amber-700 mt-0.5">
+                      -₹{cartDiscountTotal.toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                  <div>
                     <div className="text-[10px] text-emerald-800 font-semibold uppercase">Net Dealer Profit</div>
                     <div className="text-base font-black text-emerald-700 mt-0.5">
-                      +₹{computedProfit.toLocaleString('en-IN')}
+                      +₹{computedNetProfit.toLocaleString('en-IN')}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-emerald-800 font-semibold uppercase">Profit Margin</div>
+                    <div className="text-[10px] text-emerald-800 font-semibold uppercase">Net Margin %</div>
                     <div className="text-base font-black text-emerald-700 mt-0.5">
                       {computedMarginPct}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-emerald-800 font-semibold uppercase">Est. Balance Due</div>
-                    <div className="text-base font-black text-slate-800 mt-0.5">
-                      ₹{computedBalanceDue.toLocaleString('en-IN')}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Payment Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* SECTION 6: PAYMENT SETTLEMENT */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Advance Booking Amount (₹) *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Payment Received Today (₹) *</label>
                   <input
                     type="number"
-                    value={bookingAmount}
+                    value={bookingAmount !== '' ? bookingAmount : computedTotalBill}
                     onChange={(e) => setBookingAmount(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-                    required
                   />
+                  <span className="text-[10px] text-slate-400">
+                    Balance due: ₹{computedBalanceDue.toLocaleString('en-IN')}
+                  </span>
                 </div>
+
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Payment / Finance Mode</label>
+                  <label className="block font-bold text-slate-700 mb-1">Payment Mode</label>
                   <select
                     value={paymentMode}
                     onChange={(e) => setPaymentMode(e.target.value as any)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   >
-                    <option value="cash">Direct Cash / Full NEFT</option>
+                    <option value="cash">Direct Cash / Full NEFT / UPI</option>
                     <option value="finance">Bank EV Loan (EMI)</option>
                     <option value="lease">Corporate Lease</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Estimated Delivery</label>
+                  <input
+                    type="date"
+                    value={deliveryDate}
+                    onChange={(e) => setDeliveryDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <div className="text-[11px] text-slate-500">
+                <span>Inventory items will be deducted immediately upon recording.</span>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+              <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
                 <button
                   type="button"
                   onClick={() => setShowBookModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
+
                 <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-sm"
+                  type="button"
+                  disabled={submitting || cartItems.length === 0}
+                  onClick={() => handleRecordSale(true)}
+                  className="px-4 py-2 text-xs font-bold text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-xl transition-all cursor-pointer disabled:opacity-50"
                 >
-                  Record Daily Sale & Lock VIN
+                  Record & Log Another Sale
+                </button>
+
+                <button
+                  type="button"
+                  disabled={submitting || cartItems.length === 0}
+                  onClick={() => handleRecordSale(false)}
+                  className="px-5 py-2 text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {submitting ? 'Recording...' : 'Record Sale & Settle'}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

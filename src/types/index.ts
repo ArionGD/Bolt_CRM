@@ -174,22 +174,42 @@ export interface Quotation {
 export type OrderStatus = 'booked' | 'payment_pending' | 'ready_for_delivery' | 'delivered' | 'cancelled';
 export type PaymentMode = 'cash' | 'finance' | 'lease';
 
+export interface OrderItem {
+  id: string;
+  item_type: 'vehicle' | 'component';
+  item_id: string;
+  name: string;
+  sku_or_vin: string;
+  category?: string;
+  quantity: number;
+  initial_cost_price: number;
+  mark_price: number;
+  sold_price: number;
+  discount: number;
+  total_amount: number;
+  total_profit: number;
+}
+
 export interface Order {
   id: string;
   order_number: string;
   customer_id: string;
   customer_name: string;
   customer_phone: string;
-  vehicle_id: string;
-  vin: string;
-  brand: string;
-  model_name: string;
-  colour: string;
+  customer_email?: string;
+  vehicle_id?: string;
+  vin?: string;
+  brand?: string;
+  model_name?: string;
+  colour?: string;
   vehicle_type?: 'scooter' | 'rickshaw';
+  items?: OrderItem[];
+  component_count?: number;
   quotation_id?: string;
   booking_date: string;
   initial_price?: number;
   sold_price?: number;
+  discount_amount?: number;
   insurance_charges?: number;
   rto_charges?: number;
   miscellaneous_charges?: number;
@@ -219,6 +239,7 @@ export interface DailySalesAggregate {
   total_units: number;
   scooter_units: number;
   rickshaw_units: number;
+  component_units?: number;
   total_initial_cost: number;
   total_revenue: number;
   total_profit: number;
@@ -232,6 +253,7 @@ export interface MonthlySalesAggregate {
   units_sold: number;
   scooter_units?: number;
   rickshaw_units?: number;
+  component_units?: number;
   total_initial_cost: number;
   total_revenue: number;
   total_insurance: number;
