@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ComponentCategory, ComponentItem } from '../../../types';
+import { ComponentCategory } from '../../../types';
 import { api } from '../../../lib/api';
-import { Cpu, X, Sparkles, Layers, ShieldCheck } from 'lucide-react';
+import { Cpu, X } from 'lucide-react';
 
 interface AddComponentModalProps {
   onClose: () => void;
@@ -20,34 +20,18 @@ const CATEGORY_LABELS: { value: ComponentCategory; label: string }[] = [
   { value: 'other', label: 'Other Spares' },
 ];
 
-const AVAILABLE_MODELS = [
-  'Scooty Model 1',
-  'Scooty Model 2',
-  'Scooty Model Pro',
-  'E-Rickshaw Model 1',
-  'Universal Spares',
-];
-
 export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, onSuccess }) => {
   const [name, setName] = useState('');
-  const [sku, setSku] = useState('');
   const [category, setCategory] = useState<ComponentCategory>('batteries');
-  const [selectedModels, setSelectedModels] = useState<string[]>(['Scooty Model 1', 'Scooty Model 2']);
+  const [cost, setCost] = useState('15000');
   const [quantity, setQuantity] = useState('10');
   const [minReorderLevel, setMinReorderLevel] = useState('3');
-  const [unitPrice, setUnitPrice] = useState('15000');
-  const [locationBin, setLocationBin] = useState('Rack A-01');
   const [supplier, setSupplier] = useState('Trisha Motors OEM Direct');
   const [warrantyMonths, setWarrantyMonths] = useState('24');
+  const [sku, setSku] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const toggleModel = (modelName: string) => {
-    setSelectedModels((prev) =>
-      prev.includes(modelName) ? prev.filter((m) => m !== modelName) : [...prev, modelName]
-    );
-  };
 
   const generateSku = () => {
     const prefixMap: Record<ComponentCategory, string> = {
@@ -78,7 +62,7 @@ export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, o
     const finalSku = sku.trim() || `CMP-${Math.floor(1000 + Math.random() * 9000)}`;
     const parsedQty = parseInt(quantity, 10) || 0;
     const parsedMin = parseInt(minReorderLevel, 10) || 1;
-    const parsedPrice = parseFloat(unitPrice) || 0;
+    const parsedCost = parseFloat(cost) || 0;
     const parsedWarranty = parseInt(warrantyMonths, 10) || 12;
 
     try {
@@ -87,11 +71,10 @@ export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, o
         name: name.trim(),
         sku: finalSku,
         category,
-        compatible_models: selectedModels.length > 0 ? selectedModels : ['Universal Spares'],
+        compatible_models: ['Universal Spares'],
         quantity: parsedQty,
         min_reorder_level: parsedMin,
-        unit_price: parsedPrice,
-        location_bin: locationBin.trim() || undefined,
+        unit_price: parsedCost,
         supplier: supplier.trim() || undefined,
         warranty_months: parsedWarranty,
         notes: notes.trim() || undefined,
@@ -107,7 +90,7 @@ export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, o
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-slate-100 my-8">
+      <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-100 my-8">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
           <div className="flex items-center space-x-3">
@@ -115,13 +98,13 @@ export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, o
               <Cpu className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-slate-900">Add EV Component / Spare Part</h3>
+              <h3 className="text-lg font-extrabold text-slate-900">Add Component Parts</h3>
               <p className="text-xs text-slate-500">Track spares, batteries, chargers, and workshop stock</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition-colors"
+            className="text-slate-400 hover:text-slate-600 p-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -135,22 +118,23 @@ export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, o
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-xs">
-          {/* Component Name & Category */}
+          {/* 1. Component Name (First Field) */}
+          <div>
+            <label className="block text-slate-700 font-bold mb-1">Component Name *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. 60V 30Ah LFP Smart Battery"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+            />
+          </div>
+
+          {/* 2. Category & Cost (₹) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-700 font-bold mb-1">Component / Part Name *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. 60V 30Ah LFP Smart Battery"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">Component Category *</label>
+              <label className="block text-slate-700 font-bold mb-1">Category *</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ComponentCategory)}
@@ -163,9 +147,71 @@ export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, o
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Cost (₹) *</label>
+              <input
+                type="number"
+                min="0"
+                required
+                placeholder="e.g. 15000"
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              />
+            </div>
           </div>
 
-          {/* SKU & Generator */}
+          {/* 3. Quantity & Min Alert Level */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Quantity in Stock *</label>
+              <input
+                type="number"
+                min="0"
+                required
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Min Reorder Level</label>
+              <input
+                type="number"
+                min="0"
+                required
+                value={minReorderLevel}
+                onChange={(e) => setMinReorderLevel(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* 4. Supplier & Warranty */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Supplier / Partner</label>
+              <input
+                type="text"
+                placeholder="e.g. Trisha Motors OEM Direct"
+                value={supplier}
+                onChange={(e) => setSupplier(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-700 font-bold mb-1">Warranty (Months)</label>
+              <input
+                type="number"
+                min="0"
+                value={warrantyMonths}
+                onChange={(e) => setWarrantyMonths(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* 5. SKU & Auto-generator */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-slate-700 font-bold">SKU / Part Number</label>
@@ -186,90 +232,16 @@ export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, o
             />
           </div>
 
-          {/* Compatible Vehicle Models */}
+          {/* 6. Notes */}
           <div>
-            <label className="block text-slate-700 font-bold mb-1.5">Compatible EV Models</label>
-            <div className="flex flex-wrap gap-2">
-              {AVAILABLE_MODELS.map((m) => {
-                const isSelected = selectedModels.includes(m);
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => toggleModel(m)}
-                    className={`px-3 py-1.5 rounded-xl border text-[11px] font-medium transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 font-semibold'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                    }`}
-                  >
-                    {isSelected && <span className="mr-1">✓</span>}
-                    {m}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Stock Qty, Min Reorder, Unit Price */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">Initial Qty</label>
-              <input
-                type="number"
-                min="0"
-                required
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">Min Alert Level</label>
-              <input
-                type="number"
-                min="0"
-                required
-                value={minReorderLevel}
-                onChange={(e) => setMinReorderLevel(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">Unit Price (₹)</label>
-              <input
-                type="number"
-                min="0"
-                required
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Storage Bin & Supplier */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">Storage Location / Rack Bin</label>
-              <input
-                type="text"
-                placeholder="e.g. Rack A-02 / Shelf 3"
-                value={locationBin}
-                onChange={(e) => setLocationBin(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-700 font-bold mb-1">OEM Supplier / Partner</label>
-              <input
-                type="text"
-                placeholder="e.g. Trisha Motors OEM Direct"
-                value={supplier}
-                onChange={(e) => setSupplier(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
-              />
-            </div>
+            <label className="block text-slate-700 font-bold mb-1">Notes</label>
+            <input
+              type="text"
+              placeholder="Optional notes or remarks"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:outline-none"
+            />
           </div>
 
           {/* Submit Actions */}
@@ -286,7 +258,7 @@ export const AddComponentModal: React.FC<AddComponentModalProps> = ({ onClose, o
               disabled={submitting}
               className="px-6 py-2.5 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700 transition-colors shadow-md shadow-brand-600/20 disabled:opacity-50 cursor-pointer"
             >
-              {submitting ? 'Registering...' : 'Add to Inventory'}
+              {submitting ? 'Registering...' : 'Add Component Parts'}
             </button>
           </div>
         </form>

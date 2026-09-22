@@ -175,7 +175,7 @@ export const ComponentsSubPage: React.FC = () => {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by SKU, component name, compatible model, or bin..."
+              placeholder="Search by SKU, component name, category..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none placeholder:text-slate-400"
@@ -219,7 +219,7 @@ export const ComponentsSubPage: React.FC = () => {
               className="inline-flex items-center justify-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold hover:bg-brand-700 shadow-sm shadow-brand-600/20 transition-all cursor-pointer ml-auto md:ml-0"
             >
               <Plus className="w-3.5 h-3.5 mr-1.5" />
-              <span>Add Component</span>
+              <span>Add Component Parts</span>
             </button>
           </div>
         </div>
@@ -232,14 +232,14 @@ export const ComponentsSubPage: React.FC = () => {
             <Cpu className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h3 className="text-base font-bold text-slate-800">No Components in Inventory</h3>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Component stock is empty. Click "Add Component" to record battery packs, motors, chargers, or replacement spares.
+              Component stock is empty. Click "Add Component Parts" to record battery packs, motors, chargers, or replacement spares.
             </p>
             <button
               onClick={() => setShowAddModal(true)}
               className="mt-4 inline-flex items-center px-3.5 py-2 bg-brand-600 text-white text-xs font-semibold rounded-xl hover:bg-brand-700 transition-colors shadow-sm cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 mr-1.5" />
-              <span>Add First Component</span>
+              <span>Add Component Parts</span>
             </button>
           </div>
         ) : (
@@ -252,7 +252,7 @@ export const ComponentsSubPage: React.FC = () => {
                   <th className="py-3.5 px-4">Compatible Models</th>
                   <th className="py-3.5 px-4">Bin Location</th>
                   <th className="py-3.5 px-4">Quantity</th>
-                  <th className="py-3.5 px-4">Unit Price</th>
+                  <th className="py-3.5 px-4">Cost (₹)</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
