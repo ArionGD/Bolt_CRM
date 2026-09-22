@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Order, StockAgeingBucket, Vehicle } from '../../../types';
-import { CheckCircle2, ShieldAlert, CalendarCheck } from 'lucide-react';
+import { CheckCircle2, ShieldAlert, CalendarCheck, ShoppingBag } from 'lucide-react';
 
 interface RecentActivityProps {
   orders: Order[];
@@ -31,7 +31,14 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
           </Link>
         </div>
         <div className="divide-y divide-slate-100 overflow-x-auto">
-          {orders.slice(0, 4).map((o) => (
+          {orders.length === 0 ? (
+            <div className="p-12 text-center text-xs text-slate-400">
+              <ShoppingBag className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p className="font-semibold text-slate-600 text-sm">No Customer Bookings Yet</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Orders will appear here as physical vehicles are booked.</p>
+            </div>
+          ) : (
+            orders.slice(0, 4).map((o) => (
             <div
               key={o.id}
               className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
@@ -75,7 +82,8 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
                 )}
               </div>
             </div>
-          ))}
+          ))
+        )}
         </div>
       </div>
 

@@ -24,18 +24,41 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 
-// Local storage keys for persistent demo mode
+// Clean, versioned local storage keys (zero pre-set junk)
 const STORAGE_KEYS = {
-  ACCOUNTS: 'volt_v2_accounts',
-  VEHICLES: 'volt_v2_vehicles',
-  CUSTOMERS: 'volt_v2_customers',
-  LEADS: 'volt_v2_leads',
-  QUOTATIONS: 'volt_v2_quotations',
-  ORDERS: 'volt_v2_orders',
-  TEST_DRIVES: 'volt_v2_test_drives',
-  PAYMENTS: 'volt_v2_payments',
-  MODELS: 'volt_v2_models',
+  ACCOUNTS: 'trisha_crm_accounts',
+  VEHICLES: 'trisha_crm_vehicles',
+  CUSTOMERS: 'trisha_crm_customers',
+  LEADS: 'trisha_crm_leads',
+  QUOTATIONS: 'trisha_crm_quotations',
+  ORDERS: 'trisha_crm_orders',
+  TEST_DRIVES: 'trisha_crm_test_drives',
+  PAYMENTS: 'trisha_crm_payments',
+  MODELS: 'trisha_crm_models',
 };
+
+// Purge any legacy demo/mock data keys so CRM starts completely clean
+if (typeof window !== 'undefined' && window.localStorage) {
+  const legacyKeys = [
+    'volt_v2_accounts',
+    'volt_v2_vehicles',
+    'volt_v2_customers',
+    'volt_v2_leads',
+    'volt_v2_quotations',
+    'volt_v2_orders',
+    'volt_v2_test_drives',
+    'volt_v2_payments',
+    'volt_orders',
+    'volt_vehicles',
+  ];
+  legacyKeys.forEach((k) => {
+    try {
+      localStorage.removeItem(k);
+    } catch {
+      // Ignore
+    }
+  });
+}
 
 function getStored<T>(key: string, defaultVal: T[]): T[] {
   try {
