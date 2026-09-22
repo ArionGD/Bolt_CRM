@@ -97,15 +97,24 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
           <p className="text-xs text-slate-500">Holding days for units in stock/transit</p>
         </div>
 
-        <div className="space-y-3">
-          <div>
+        {/* Connected Streamline & Branch Nodes */}
+        <div className="relative pl-6 space-y-4 my-2">
+          {/* Continuous vertical streamline track */}
+          <div className="absolute left-[7px] top-2 bottom-3 w-[2px] bg-gradient-to-b from-emerald-500 via-sky-500 via-slate-400 to-slate-700 rounded-full" />
+
+          {/* Branch 1: < 30 Days (Fresh Stock) */}
+          <div className="relative">
+            {/* Streamline Milestone Dot & Branch Line */}
+            <div className="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50 border-2 border-white shadow-sm" />
             <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-emerald-700">&lt; 30 Days (Fresh Stock)</span>
-              <span className="text-slate-900">{ageing?.under_30_days || 0} units</span>
+              <span className="text-emerald-800 flex items-center font-bold">
+                &lt; 30 Days (Fresh Stock)
+              </span>
+              <span className="text-slate-900 font-bold">{ageing?.under_30_days || 0} units</span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-2">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-emerald-500 h-2 rounded-full"
+                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
                 style={{
                   width: `${Math.min(
                     100,
@@ -116,14 +125,16 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             </div>
           </div>
 
-          <div>
+          {/* Branch 2: 30–60 Days */}
+          <div className="relative">
+            <div className="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-sky-500 ring-4 ring-sky-50 border-2 border-white shadow-sm" />
             <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-sky-700">30–60 Days</span>
-              <span className="text-slate-900">{ageing?.days_30_to_60 || 0} units</span>
+              <span className="text-sky-800 font-bold">30–60 Days (Normal Shelf)</span>
+              <span className="text-slate-900 font-bold">{ageing?.days_30_to_60 || 0} units</span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-2">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-sky-500 h-2 rounded-full"
+                className="bg-sky-500 h-1.5 rounded-full transition-all duration-300"
                 style={{
                   width: `${Math.min(
                     100,
@@ -134,14 +145,16 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             </div>
           </div>
 
-          <div>
+          {/* Branch 3: 60–90 Days */}
+          <div className="relative">
+            <div className="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-slate-400 ring-4 ring-slate-100 border-2 border-white shadow-sm" />
             <div className="flex justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-600">60–90 Days</span>
-              <span className="text-slate-900">{ageing?.days_60_to_90 || 0} units</span>
+              <span className="text-slate-700 font-bold">60–90 Days (Attention Needed)</span>
+              <span className="text-slate-900 font-bold">{ageing?.days_60_to_90 || 0} units</span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-2">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-slate-400 h-2 rounded-full"
+                className="bg-slate-400 h-1.5 rounded-full transition-all duration-300"
                 style={{
                   width: `${Math.min(
                     100,
@@ -152,14 +165,16 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({
             </div>
           </div>
 
-          <div>
+          {/* Branch 4: > 90 Days */}
+          <div className="relative">
+            <div className="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-slate-800 ring-4 ring-slate-200 border-2 border-white shadow-sm" />
             <div className="flex justify-between text-xs font-semibold mb-1">
               <span className="text-slate-900 font-bold">&gt; 90 Days (Slow Moving)</span>
               <span className="text-slate-900 font-bold">{ageing?.over_90_days || 0} units</span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-2">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-slate-800 h-2 rounded-full"
+                className="bg-slate-800 h-1.5 rounded-full transition-all duration-300"
                 style={{
                   width: `${Math.min(
                     100,

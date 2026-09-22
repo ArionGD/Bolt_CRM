@@ -10,6 +10,7 @@ import {
   BarChart3,
   Sparkles,
   LogOut,
+  GitBranch,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -53,31 +54,53 @@ export const Sidebar: React.FC = () => {
                 <Boxes className="w-3.5 h-3.5 text-slate-400" />
                 <span>Inventory</span>
               </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60 flex items-center">
+                <GitBranch className="w-2.5 h-2.5 mr-1 text-emerald-400" />
+                2 Branches
+              </span>
             </div>
-            <div className="space-y-1 pl-2 pt-0.5">
-              <NavLink
-                to="/crm/inventory/vehicle"
-                className={`flex items-center space-x-3 px-3.5 py-2 rounded-xl font-medium text-xs transition-all ${
-                  isVehicleActive
-                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                }`}
-              >
-                <Car className="w-3.5 h-3.5 shrink-0" />
-                <span>Vehicle</span>
-              </NavLink>
 
-              <NavLink
-                to="/crm/inventory/components"
-                className={`flex items-center space-x-3 px-3.5 py-2 rounded-xl font-medium text-xs transition-all ${
-                  isComponentsActive
-                    ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
-                }`}
-              >
-                <Cpu className="w-3.5 h-3.5 shrink-0" />
-                <span>Components</span>
-              </NavLink>
+            {/* Visual Streamlined Tree Branch Connector Lines */}
+            <div className="relative pl-3.5 ml-4 border-l-2 border-slate-800 space-y-1.5 mt-1">
+              {/* Branch 1: Vehicle */}
+              <div className="relative">
+                <span
+                  className={`absolute -left-3.5 top-1/2 w-3 h-[1.5px] -translate-y-1/2 transition-colors ${
+                    isVehicleActive ? 'bg-emerald-500' : 'bg-slate-700'
+                  }`}
+                />
+                <NavLink
+                  to="/crm/inventory/vehicle"
+                  className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-all ${
+                    isVehicleActive
+                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Car className="w-3.5 h-3.5 shrink-0" />
+                  <span>Vehicle</span>
+                </NavLink>
+              </div>
+
+              {/* Branch 2: Components */}
+              <div className="relative">
+                <span
+                  className={`absolute -left-3.5 top-1/2 w-3 h-[1.5px] -translate-y-1/2 transition-colors ${
+                    isComponentsActive ? 'bg-emerald-500' : 'bg-slate-700'
+                  }`}
+                />
+                <NavLink
+                  to="/crm/inventory/components"
+                  className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl font-medium text-xs transition-all ${
+                    isComponentsActive
+                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30 font-semibold'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Cpu className="w-3.5 h-3.5 shrink-0" />
+                  <span>Components</span>
+                </NavLink>
+              </div>
             </div>
           </div>
 
@@ -130,17 +153,24 @@ export const Sidebar: React.FC = () => {
 
       {/* Pinned Bottom Section: Atomic Lock Info & Dedicated Logout Button */}
       <div className="p-3 space-y-2.5 border-t border-slate-800/80">
-        {/* Showroom atomic locking status */}
+        {/* Showroom atomic locking status & Branch indicator */}
         <div className="p-3 rounded-xl bg-gradient-to-br from-slate-800 to-slate-850 border border-slate-700/60 text-xs">
-          <div className="flex items-center space-x-2 text-emerald-400 font-semibold mb-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Double-Selling Lock</span>
+          <div className="flex items-center justify-between text-emerald-400 font-semibold mb-1">
+            <div className="flex items-center space-x-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Atomic VIN Lock</span>
+            </div>
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span>
+              Main Branch
+            </span>
           </div>
           <p className="text-slate-400 text-[11px] leading-relaxed">
-            Physical VIN allocation is enforced atomically at the database level.
+            Physical chassis allocation is enforced atomically at the database level.
           </p>
-          <div className="mt-2 text-[10px] text-slate-400 font-mono">
-            Active Account: <span className="text-white font-bold uppercase">{role}</span>
+          <div className="mt-2 text-[10px] text-slate-400 font-mono flex items-center justify-between">
+            <span>Branch: <span className="text-slate-200">Trisha Central</span></span>
+            <span className="text-white font-bold uppercase">{role}</span>
           </div>
         </div>
 
