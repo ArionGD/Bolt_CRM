@@ -88,10 +88,10 @@ export const Navbar: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsDropdownOpen((prev) => !prev)}
-            className={`flex items-center space-x-2 sm:space-x-3 px-2 py-1.5 rounded-xl border transition-all duration-150 cursor-pointer ${
+            className={`flex items-center space-x-2 sm:space-x-3 px-2.5 py-1.5 rounded-xl border transition-all duration-150 cursor-pointer ${
               isDropdownOpen
                 ? 'bg-slate-100 border-slate-300 shadow-inner'
-                : 'bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-200'
+                : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm'
             }`}
             aria-expanded={isDropdownOpen}
             aria-label="User profile menu"
