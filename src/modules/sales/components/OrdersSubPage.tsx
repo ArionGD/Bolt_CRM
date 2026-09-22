@@ -39,9 +39,18 @@ import {
   Wrench,
   Search,
   Package,
+  IndianRupee,
 } from 'lucide-react';
 
-export const OrdersSubPage: React.FC = () => {
+interface OrdersSubPageProps {
+  salesCategory?: 'vehicle' | 'component';
+  onCategoryChange?: (category: 'vehicle' | 'component') => void;
+}
+
+export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
+  salesCategory,
+  onCategoryChange,
+}) => {
   const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [dailySales, setDailySales] = useState<DailySalesAggregate[]>([]);
@@ -352,12 +361,15 @@ export const OrdersSubPage: React.FC = () => {
     setSubsidyDiscount('0');
   };
 
-  // Open Modal with first available vehicle
+  // Open Modal with first available vehicle or component
   const handleOpenModal = () => {
     resetFormState();
+    setPickerTab(activeCategory);
     setShowBookModal(true);
-    if (availableVehicles.length > 0) {
+    if (activeCategory === 'vehicle' && availableVehicles.length > 0) {
       handleSelectVehicleToPick(availableVehicles[0].id);
+    } else if (activeCategory === 'component' && availableComponents.length > 0) {
+      handleSelectComponentToPick(availableComponents[0].id);
     }
   };
 
@@ -421,7 +433,31 @@ export const OrdersSubPage: React.FC = () => {
     }
   };
 
-  const filtered = orders.filter((o) => {
+  const isVehicleOrder = (o: Order) => {
+    if (o.items && o.items.length > 0) {
+      return o.items.some((it) => it.item_type === 'vehicle');
+    }
+    return Boolean(o.vehicle_id || o.model_name || o.vehicle_type || !o.component_count);
+  };
+
+  const isComponentOrder = (o: Order) => {
+    if (o.items && o.items.length > 0) {
+      return o.items.some((it) => it.item_type === 'component');
+    }
+    return Boolean(o.component_count && o.component_count > 0);
+  };
+
+  const activeCategory =
+    salesCategory ||
+    (searchParams.get('type') === 'component' ? 'component' : 'vehicle');
+
+  const categoryOrders = orders.filter((o) => {
+    if (activeCategory === 'vehicle') return isVehicleOrder(o);
+    if (activeCategory === 'component') return isComponentOrder(o);
+    return true;
+  });
+
+  const filtered = categoryOrders.filter((o) => {
     if (statusFilter === 'all') return true;
     return o.status === statusFilter;
   });
@@ -467,13 +503,89 @@ export const OrdersSubPage: React.FC = () => {
     return sum + (o.component_count || 0);
   }, 0);
 
-  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
-  const totalProfit = orders.reduce((sum, o) => {
-    if (o.net_profit !== undefined) return sum + Number(o.net_profit);
-    const sold = Number(o.sold_price || o.total_amount);
-    const init = Number(o.initial_price || Math.round(sold * 0.88));
-    const misc = Number(o.miscellaneous_charges || 0);
-    return sum + (sold - init + misc);
+  const totalBatteries = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      return (
+        sum +
+        o.items
+          .filter(
+            (it) =>
+              it.item_type === 'component' &&
+              (it.category === 'batteries' || it.name.toLowerCase().includes('battery'))
+          )
+          .reduce((s, it) => s + it.quantity, 0)
+      );
+    }
+    return sum;
+  }, 0);
+
+  const totalMotorsAndChargers = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      return (
+        sum +
+        o.items
+          .filter(
+            (it) =>
+              it.item_type === 'component' &&
+              (it.category === 'motors' ||
+                it.category === 'chargers' ||
+                it.name.toLowerCase().includes('motor') ||
+                it.name.toLowerCase().includes('charger'))
+          )
+          .reduce((s, it) => s + it.quantity, 0)
+      );
+    }
+    return sum;
+  }, 0);
+
+  const vehicleRevenue = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      const vItems = o.items.filter((it) => it.item_type === 'vehicle');
+      if (vItems.length > 0) {
+        return sum + vItems.reduce((s, it) => s + it.total_amount, 0);
+      }
+      return sum;
+    }
+    if (isVehicleOrder(o)) return sum + Number(o.total_amount || 0);
+    return sum;
+  }, 0);
+
+  const vehicleProfit = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      const vItems = o.items.filter((it) => it.item_type === 'vehicle');
+      if (vItems.length > 0) {
+        return sum + vItems.reduce((s, it) => s + it.total_profit, 0);
+      }
+      return sum;
+    }
+    if (isVehicleOrder(o)) {
+      if (o.net_profit !== undefined) return sum + Number(o.net_profit);
+      const sold = Number(o.sold_price || o.total_amount);
+      const init = Number(o.initial_price || Math.round(sold * 0.88));
+      const misc = Number(o.miscellaneous_charges || 0);
+      return sum + (sold - init + misc);
+    }
+    return sum;
+  }, 0);
+
+  const compRevenue = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      const cItems = o.items.filter((it) => it.item_type === 'component');
+      return sum + cItems.reduce((s, it) => s + it.total_amount, 0);
+    }
+    if (o.component_count && !o.vehicle_id) return sum + Number(o.total_amount || 0);
+    return sum;
+  }, 0);
+
+  const compProfit = orders.reduce((sum, o) => {
+    if (o.items && o.items.length > 0) {
+      const cItems = o.items.filter((it) => it.item_type === 'component');
+      return sum + cItems.reduce((s, it) => s + it.total_profit, 0);
+    }
+    if (o.component_count && !o.vehicle_id) {
+      return sum + Number(o.net_profit || Math.round(Number(o.total_amount || 0) * 0.25));
+    }
+    return sum;
   }, 0);
 
   // Timeline list (sorted descending to show latest days first)
@@ -484,93 +596,9 @@ export const OrdersSubPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Subpage Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-              Day-Wise Sales & Retail Counter Engine
-            </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-100 text-brand-800">
-              {orders.length} transactions
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Continuous daily sales mapping: record customer walk-in checkout with multi-item bargaining, inventory stock protection, and transparent dealer profit margins.
-          </p>
-        </div>
-
-        <button
-          onClick={handleOpenModal}
-          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 shadow-sm transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4 mr-1.5" />
-          <span>New Retail Sale / Counter POS</span>
-        </button>
-      </div>
-
-      {/* Top 5 Real-Time Summary Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {/* Card 1: Scooties Sold */}
-        <div className="p-3.5 bg-white rounded-2xl border border-emerald-100 shadow-sm">
-          <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
-            <span>🛵 Scooties (2W)</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">{totalScooters} Units</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Personal EV Two-Wheelers</div>
-        </div>
-
-        {/* Card 2: E-Rickshaws Sold */}
-        <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-sm">
-          <div className="flex items-center justify-between text-xs font-bold text-sky-800">
-            <span>🛺 Rickshaws (3W)</span>
-            <span className="w-2 h-2 rounded-full bg-sky-500" />
-          </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">{totalRickshaws} Units</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Commercial 5-Seater L5M</div>
-        </div>
-
-        {/* Card 3: Spares & Accessories Sold */}
-        <div className="p-3.5 bg-white rounded-2xl border border-purple-100 shadow-sm">
-          <div className="flex items-center justify-between text-xs font-bold text-purple-800">
-            <span>⚙️ Spares & Accs</span>
-            <span className="w-2 h-2 rounded-full bg-purple-500" />
-          </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">{totalComponents} Pcs</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Batteries, Chargers, Spares</div>
-        </div>
-
-        {/* Card 4: Total Revenue */}
-        <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-            <span>Invoiced Revenue</span>
-            <DollarSign className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <div className="text-2xl font-black text-sky-800 mt-1">
-            ₹{totalRevenue.toLocaleString('en-IN')}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Cumulative sales billed</div>
-        </div>
-
-        {/* Card 5: Net Dealer Profit */}
-        <div className="p-3.5 bg-white rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-            <span>Net Dealer Profit</span>
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-          </div>
-          <div className="text-2xl font-black text-emerald-700 mt-1">
-            +₹{totalProfit.toLocaleString('en-IN')}
-          </div>
-          <div className="text-[11px] text-emerald-800 mt-0.5">
-            {totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : 0}% Net Margin
-          </div>
-        </div>
-      </div>
-
-      {/* View Mode Toggle & Status Filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl">
+      {/* Top Action Bar with View Toggle and New Retail Sale Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl w-fit">
           <button
             onClick={() => setViewMode('daily_timeline')}
             className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -580,7 +608,7 @@ export const OrdersSubPage: React.FC = () => {
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
-            <span>Day-by-Day Daily Timeline</span>
+            <span>Daily Timeline</span>
           </button>
 
           <button
@@ -592,24 +620,140 @@ export const OrdersSubPage: React.FC = () => {
             }`}
           >
             <List className="w-3.5 h-3.5" />
-            <span>All Transactions Table</span>
+            <span>Transactions Table</span>
           </button>
         </div>
 
-        {/* Filter Tabs for Status */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto text-xs">
-          {['all', 'booked', 'payment_pending', 'ready_for_delivery', 'delivered'].map((st) => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-2.5 py-1 rounded-lg font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
-                statusFilter === st ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {st.replace('_', ' ')}
-            </button>
-          ))}
-        </div>
+        <button
+          onClick={handleOpenModal}
+          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 shadow-sm transition-all cursor-pointer ml-auto sm:ml-0"
+        >
+          <Plus className="w-4 h-4 mr-1.5" />
+          <span>New Retail Sale</span>
+        </button>
+      </div>
+
+      {/* Summary Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {activeCategory === 'vehicle' ? (
+          <>
+            {/* Card 1: Scooties */}
+            <div className="p-3.5 bg-white rounded-2xl border border-emerald-100 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
+                <span>Scooties (2W)</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalScooters} Units</div>
+            </div>
+
+            {/* Card 2: Rickshaws */}
+            <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-sky-800">
+                <span>Rickshaws (3W)</span>
+                <span className="w-2 h-2 rounded-full bg-sky-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalRickshaws} Units</div>
+            </div>
+
+            {/* Card 3: Total Vehicles */}
+            <div className="p-3.5 bg-white rounded-2xl border border-indigo-100 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-indigo-800">
+                <span>Total Vehicles</span>
+                <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalScooters + totalRickshaws} Units</div>
+            </div>
+
+            {/* Card 4: Revenue */}
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+                <span>Revenue (₹)</span>
+                <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
+              </div>
+              <div className="text-2xl font-black text-sky-800 mt-1">
+                ₹{vehicleRevenue.toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            {/* Card 5: Profit */}
+            <div className="p-3.5 bg-white rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm col-span-2 sm:col-span-1">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                <span>Profit (₹)</span>
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-black text-emerald-700 mt-1">
+                +₹{vehicleProfit.toLocaleString('en-IN')}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Card 1: Batteries */}
+            <div className="p-3.5 bg-white rounded-2xl border border-emerald-100 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
+                <span>Batteries</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalBatteries} Units</div>
+            </div>
+
+            {/* Card 2: Motors & Chargers */}
+            <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-sky-800">
+                <span>Motors & Chargers</span>
+                <span className="w-2 h-2 rounded-full bg-sky-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalMotorsAndChargers} Units</div>
+            </div>
+
+            {/* Card 3: Total Spares */}
+            <div className="p-3.5 bg-white rounded-2xl border border-purple-100 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-purple-800">
+                <span>Total Spares</span>
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalComponents} Pcs</div>
+            </div>
+
+            {/* Card 4: Revenue */}
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+                <span>Revenue (₹)</span>
+                <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
+              </div>
+              <div className="text-2xl font-black text-sky-800 mt-1">
+                ₹{compRevenue.toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            {/* Card 5: Profit */}
+            <div className="p-3.5 bg-white rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm col-span-2 sm:col-span-1">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                <span>Profit (₹)</span>
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-black text-emerald-700 mt-1">
+                +₹{compProfit.toLocaleString('en-IN')}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Filter Tabs for Status */}
+      <div className="flex items-center space-x-1.5 overflow-x-auto text-xs bg-white p-2.5 rounded-2xl border border-slate-200 shadow-sm">
+        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">Status:</span>
+        {['all', 'booked', 'payment_pending', 'ready_for_delivery', 'delivered'].map((st) => (
+          <button
+            key={st}
+            onClick={() => setStatusFilter(st)}
+            className={`px-3 py-1 rounded-lg font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
+              statusFilter === st ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {st.replace('_', ' ')}
+          </button>
+        ))}
       </div>
 
       {/* VIEW 1: DAY-BY-DAY DAILY TIMELINE */}
@@ -641,7 +785,66 @@ export const OrdersSubPage: React.FC = () => {
           ) : (
             <div className="space-y-3">
               {visibleTimelineDays.map((day) => {
-                const hasSales = day.total_units > 0;
+                const dayOrders = day.orders.filter((o) =>
+                  activeCategory === 'vehicle' ? isVehicleOrder(o) : isComponentOrder(o)
+                );
+                const dayUnits = dayOrders.reduce((sum, o) => {
+                  if (activeCategory === 'vehicle') {
+                    if (o.items && o.items.length > 0) {
+                      return (
+                        sum +
+                        o.items
+                          .filter((it) => it.item_type === 'vehicle')
+                          .reduce((s, it) => s + it.quantity, 0)
+                      );
+                    }
+                    return sum + 1;
+                  } else {
+                    if (o.items && o.items.length > 0) {
+                      return (
+                        sum +
+                        o.items
+                          .filter((it) => it.item_type === 'component')
+                          .reduce((s, it) => s + it.quantity, 0)
+                      );
+                    }
+                    return sum + (o.component_count || 1);
+                  }
+                }, 0);
+                const dayRevenue = dayOrders.reduce((sum, o) => {
+                  if (activeCategory === 'vehicle') {
+                    if (o.items && o.items.length > 0) {
+                      const vItems = o.items.filter((it) => it.item_type === 'vehicle');
+                      return sum + vItems.reduce((s, it) => s + it.total_amount, 0);
+                    }
+                    return sum + Number(o.total_amount || 0);
+                  } else {
+                    if (o.items && o.items.length > 0) {
+                      const cItems = o.items.filter((it) => it.item_type === 'component');
+                      return sum + cItems.reduce((s, it) => s + it.total_amount, 0);
+                    }
+                    return sum + Number(o.total_amount || 0);
+                  }
+                }, 0);
+                const dayProfit = dayOrders.reduce((sum, o) => {
+                  if (activeCategory === 'vehicle') {
+                    if (o.items && o.items.length > 0) {
+                      const vItems = o.items.filter((it) => it.item_type === 'vehicle');
+                      return sum + vItems.reduce((s, it) => s + it.total_profit, 0);
+                    }
+                    if (o.net_profit !== undefined) return sum + Number(o.net_profit);
+                    const sold = Number(o.sold_price || o.total_amount);
+                    const init = Number(o.initial_price || Math.round(sold * 0.88));
+                    return sum + (sold - init);
+                  } else {
+                    if (o.items && o.items.length > 0) {
+                      const cItems = o.items.filter((it) => it.item_type === 'component');
+                      return sum + cItems.reduce((s, it) => s + it.total_profit, 0);
+                    }
+                    return sum + Number(o.net_profit || 0);
+                  }
+                }, 0);
+                const hasSales = dayUnits > 0;
                 return (
                   <div
                     key={day.date}
@@ -670,22 +873,23 @@ export const OrdersSubPage: React.FC = () => {
                             </span>
                             {hasSales ? (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
-                                {day.total_units} {day.total_units === 1 ? 'sale' : 'continuous sales'}
+                                {dayUnits} {dayUnits === 1 ? 'sale' : 'sales'}
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">
-                                0 sales (No transactions)
+                                0 sales
                               </span>
                             )}
                           </div>
                           <div className="text-[11px] text-slate-500 mt-0.5">
                             {hasSales ? (
                               <span>
-                                🛵 {day.scooter_units} Scooties • 🛺 {day.rickshaw_units} E-Rickshaws
-                                {day.component_units ? ` • ⚙️ ${day.component_units} Spares/Accs` : ''}
+                                {activeCategory === 'vehicle'
+                                  ? `${day.scooter_units} Scooties • ${day.rickshaw_units} E-Rickshaws`
+                                  : `${dayUnits} Components & Spares`}
                               </span>
                             ) : (
-                              <span>Showroom open • No vehicle dispatches on this date</span>
+                              <span>No {activeCategory} sales on this date</span>
                             )}
                           </div>
                         </div>
@@ -697,29 +901,29 @@ export const OrdersSubPage: React.FC = () => {
                           <div>
                             <span className="text-[10px] text-slate-400 font-bold uppercase">Day Revenue</span>
                             <div className="font-mono font-black text-sky-800 text-sm">
-                              ₹{day.total_revenue.toLocaleString('en-IN')}
+                              ₹{dayRevenue.toLocaleString('en-IN')}
                             </div>
                           </div>
                           <div>
                             <span className="text-[10px] text-slate-400 font-bold uppercase">Net Profit</span>
                             <div className="font-mono font-black text-emerald-700 text-sm">
-                              +₹{day.total_profit.toLocaleString('en-IN')}
+                              +₹{dayProfit.toLocaleString('en-IN')}
                             </div>
                           </div>
                           <div>
                             <span className="text-[10px] text-slate-400 font-bold uppercase">Margin</span>
                             <div className="font-bold text-xs text-slate-700">
-                              {day.margin_pct}%
+                              {dayRevenue > 0 ? ((dayProfit / dayRevenue) * 100).toFixed(1) : 0}%
                             </div>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Continuous Customer Sales on this Day */}
-                    {hasSales && day.orders.length > 0 && (
+                    {/* Customer Sales on this Day */}
+                    {hasSales && dayOrders.length > 0 && (
                       <div className="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        {day.orders.map((o) => {
+                        {dayOrders.map((o) => {
                           const isRick =
                             o.vehicle_type === 'rickshaw' ||
                             o.model_name?.toLowerCase().includes('rickshaw');
@@ -769,11 +973,6 @@ export const OrdersSubPage: React.FC = () => {
                                           : 'bg-purple-100 text-purple-800'
                                       }`}
                                     >
-                                      {it.item_type === 'vehicle' ? (
-                                        it.category === 'E-Rickshaw' ? '🛺' : '🛵'
-                                      ) : (
-                                        '⚙️'
-                                      )}{' '}
                                       {it.quantity}x {it.name}
                                     </span>
                                   ))
@@ -785,7 +984,7 @@ export const OrdersSubPage: React.FC = () => {
                                         : 'bg-emerald-100 text-emerald-800'
                                     }`}
                                   >
-                                    {isRick ? '🛺 1x' : '🛵 1x'} {o.brand} {o.model_name}
+                                    1x {o.brand} {o.model_name}
                                   </span>
                                 )}
                               </div>
@@ -1082,7 +1281,7 @@ export const OrdersSubPage: React.FC = () => {
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      🛵 Vehicles ({availableVehicles.length} in stock)
+                      Vehicles ({availableVehicles.length} in stock)
                     </button>
                     <button
                       type="button"
@@ -1093,7 +1292,7 @@ export const OrdersSubPage: React.FC = () => {
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      ⚙️ Components & Spares ({availableComponents.length} in stock)
+                      Components & Spares ({availableComponents.length} in stock)
                     </button>
                   </div>
                 </div>
