@@ -59,6 +59,7 @@ export interface Vehicle {
   brand?: string;
   model_name?: string;
   variant?: string;
+  body_type?: string;
   primary_photo_url?: string;
   created_at: string;
 }

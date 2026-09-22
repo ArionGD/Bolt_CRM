@@ -50,29 +50,26 @@ export const OverviewMain: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Title & Quick Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Showroom Overview
+            Dashboard Overview
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Real-time status of EV inventory, customer bookings, and receivables.
-          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Link
             to="/crm/inventory"
-            className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 shadow-sm transition-all"
+            className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-500 shadow-sm transition-all"
           >
-            <Car className="w-4 h-4 mr-2" />
+            <Car className="w-3.5 h-3.5 mr-2" />
             <span>Manage Inventory</span>
           </Link>
           <Link
-            to="/crm/sales?tab=quotations"
-            className="inline-flex items-center px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-50 shadow-sm transition-all"
+            to="/crm/sales"
+            className="inline-flex items-center px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-50 shadow-sm transition-all"
           >
-            <ShoppingBag className="w-4 h-4 mr-2 text-slate-500" />
-            <span>Create Quote</span>
+            <ShoppingBag className="w-3.5 h-3.5 mr-2 text-slate-500" />
+            <span>Manage Sales</span>
           </Link>
         </div>
       </div>

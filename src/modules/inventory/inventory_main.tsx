@@ -40,7 +40,7 @@ export const InventoryMain: React.FC = () => {
     },
     {
       id: 'components' as const,
-      label: 'Components',
+      label: 'Component',
       description: 'Batteries, motors, chargers & spares',
       icon: Cpu,
     },
@@ -52,11 +52,8 @@ export const InventoryMain: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Inventory
+            Vehicle Inventory
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Showroom physical vehicle chassis allocation and EV component workshop spares.
-          </p>
         </div>
 
         {/* 2 Sub-Tabs Bar: Vehicle and Components */}

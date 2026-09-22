@@ -119,12 +119,51 @@ export const api = {
     return list;
   },
 
+  async addModel(modelData: Partial<VehicleModel>): Promise<VehicleModel> {
+    const models = await this.getModels();
+    const newM: VehicleModel = {
+      id: modelData.id || 'm_' + Date.now(),
+      brand: modelData.brand || 'Trisha',
+      model_name: modelData.model_name || 'Custom EV Model',
+      variant: modelData.variant || 'Standard',
+      body_type: modelData.body_type || (modelData.model_name?.toLowerCase().includes('rickshaw') ? 'E-Rickshaw' : 'Scooty'),
+      battery_kwh: modelData.battery_kwh || 2.5,
+      range_km: modelData.range_km || 95,
+      motor_power_kw: modelData.motor_power_kw || 1.5,
+      charging_ac_kw: modelData.charging_ac_kw || 3.3,
+      charging_dc_kw: modelData.charging_dc_kw || 15,
+      seating_capacity: modelData.seating_capacity || (modelData.body_type === 'E-Rickshaw' ? 5 : 2),
+      ex_showroom_price: modelData.ex_showroom_price || 75000,
+      is_active: true,
+    };
+    models.unshift(newM);
+    setStored(STORAGE_KEYS.MODELS, models);
+    return newM;
+  },
+
   async addVehicle(vehicle: Partial<Vehicle>): Promise<Vehicle> {
     const models = await this.getModels();
-    const model = models.find((m) => m.id === vehicle.model_id);
+    let model = models.find(
+      (m) =>
+        m.id === vehicle.model_id ||
+        (vehicle.model_name && m.model_name.toLowerCase() === vehicle.model_name.trim().toLowerCase())
+    );
+
+    if (!model && vehicle.model_name) {
+      model = await this.addModel({
+        brand: vehicle.brand || 'Trisha',
+        model_name: vehicle.model_name.trim(),
+        variant: vehicle.variant || 'Standard',
+        body_type:
+          (vehicle.body_type as any) ||
+          (vehicle.model_name.toLowerCase().includes('rickshaw') ? 'E-Rickshaw' : 'Scooty'),
+        ex_showroom_price: vehicle.asking_price || 75000,
+      });
+    }
+
     const newV: Vehicle = {
       id: 'v_' + Date.now(),
-      model_id: vehicle.model_id || 'm1',
+      model_id: model?.id || vehicle.model_id || 'm_' + Date.now(),
       vin: vehicle.vin || 'VIN' + Date.now(),
       motor_no: vehicle.motor_no,
       battery_serial: vehicle.battery_serial,
@@ -132,15 +171,16 @@ export const api = {
       manufacture_year: vehicle.manufacture_year || 2026,
       condition: vehicle.condition || 'new',
       status: vehicle.status || 'in_stock',
-      purchase_price: vehicle.purchase_price,
-      asking_price: vehicle.asking_price || (model?.ex_showroom_price ? model.ex_showroom_price + 5000 : 75000),
+      purchase_price: vehicle.purchase_price || (vehicle.asking_price ? Math.round(vehicle.asking_price * 0.88) : 65000),
+      asking_price: vehicle.asking_price || (model?.ex_showroom_price ? model.ex_showroom_price : 75000),
       odometer_km: vehicle.odometer_km || 0,
       location: vehicle.location || 'Showroom Floor',
       arrival_date: vehicle.arrival_date || new Date().toISOString().split('T')[0],
       notes: vehicle.notes,
-      brand: model?.brand,
-      model_name: model?.model_name,
-      variant: model?.variant,
+      brand: vehicle.brand || model?.brand || 'Trisha',
+      model_name: vehicle.model_name || model?.model_name || 'EV Model',
+      variant: vehicle.variant || model?.variant || 'Standard',
+      body_type: vehicle.body_type || model?.body_type || 'Scooty',
       created_at: new Date().toISOString(),
     };
 
