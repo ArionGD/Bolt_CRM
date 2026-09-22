@@ -30,8 +30,7 @@ export const StockAgeingReport: React.FC<StockAgeingReportProps> = ({ ageing }) 
             <Clock className="w-5 h-5" />
           </span>
           <div>
-            <h3 className="text-base font-black text-slate-900">Inventory Ageing & Capital Velocity</h3>
-            <p className="text-xs text-slate-500">Days on showroom floor and capital holding distribution</p>
+            <h3 className="text-base font-black text-slate-900">Stock Ageing</h3>
           </div>
         </div>
 
@@ -90,9 +89,6 @@ export const StockAgeingReport: React.FC<StockAgeingReportProps> = ({ ageing }) 
             <span className="text-2xl font-black text-emerald-950">{u30} Units</span>
             <span className="text-xs font-semibold text-emerald-700">&lt; 30 Days</span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
-            Fresh factory consignments within optimum dealer turnaround cycle.
-          </p>
         </div>
 
         {/* Bucket 2: 30–60 Days */}
@@ -109,9 +105,6 @@ export const StockAgeingReport: React.FC<StockAgeingReportProps> = ({ ageing }) 
             <span className="text-2xl font-black text-sky-950">{d3060} Units</span>
             <span className="text-xs font-semibold text-sky-700">30–60 Days</span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
-            Active showroom display and customer test demonstration units.
-          </p>
         </div>
 
         {/* Bucket 3: 60–90 Days */}
@@ -128,9 +121,6 @@ export const StockAgeingReport: React.FC<StockAgeingReportProps> = ({ ageing }) 
             <span className="text-2xl font-black text-amber-950">{d6090} Units</span>
             <span className="text-xs font-semibold text-amber-700">60–90 Days</span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
-            Recommend customer incentive discount or helmet/accessory bundle.
-          </p>
         </div>
 
         {/* Bucket 4: > 90 Days */}
@@ -147,9 +137,6 @@ export const StockAgeingReport: React.FC<StockAgeingReportProps> = ({ ageing }) 
             <span className="text-2xl font-black text-rose-950">{o90} Units</span>
             <span className="text-xs font-semibold text-rose-700">&gt; 90 Days</span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-tight">
-            Prioritize for commercial fleet deal or spot clearance promotion.
-          </p>
         </div>
       </div>
     </div>

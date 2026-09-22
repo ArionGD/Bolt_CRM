@@ -81,8 +81,7 @@ export const SalesSummaryChart: React.FC<SalesSummaryChartProps> = ({ summary, l
             <Target className="w-5 h-5" />
           </span>
           <div>
-            <h3 className="text-base font-black text-slate-900">Lead Conversion Funnel</h3>
-            <p className="text-xs text-slate-500">Walk-in pipeline progression from initial inquiry to final handover</p>
+            <h3 className="text-base font-black text-slate-900">Lead Funnel</h3>
           </div>
         </div>
 

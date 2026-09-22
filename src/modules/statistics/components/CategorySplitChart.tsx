@@ -87,8 +87,7 @@ export const CategorySplitChart: React.FC<CategorySplitChartProps> = ({
               <PieChart className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="text-base font-black text-slate-900">Vehicle Category Contribution</h3>
-              <p className="text-xs text-slate-500">Revenue split across scooters, commercial rickshaws & spares</p>
+              <h3 className="text-base font-black text-slate-900">Category Share</h3>
             </div>
           </div>
           <span className="text-xs font-bold text-slate-400 font-mono">
@@ -183,8 +182,7 @@ export const CategorySplitChart: React.FC<CategorySplitChartProps> = ({
               <Award className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="text-base font-black text-slate-900">Top Selling Vehicle Models</h3>
-              <p className="text-xs text-slate-500">Ranked by booked units & showroom sales turnover</p>
+              <h3 className="text-base font-black text-slate-900">Top Selling Models</h3>
             </div>
           </div>
           <span className="text-xs font-extrabold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">

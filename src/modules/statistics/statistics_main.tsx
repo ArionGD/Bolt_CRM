@@ -43,7 +43,6 @@ export const StatisticsMain: React.FC = () => {
   const [models, setModels] = useState<VehicleModel[]>([]);
   const [components, setComponents] = useState<ComponentItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState<'all' | 'month' | 'quarter'>('all');
 
   async function loadData() {
     setLoading(true);
@@ -122,61 +121,23 @@ export const StatisticsMain: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-16">
-      {/* 1. Header Bar with Intelligence Tag & Action Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-5">
-        <div>
-          <div className="flex items-center space-x-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
-              Dealership Statistics & Reports
-            </h1>
-            <span className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-blue-700 border border-blue-200">
-              <Zap className="w-3.5 h-3.5 text-blue-600" />
-              <span>Live Analytics Engine</span>
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Executive metrics covering booked revenue, profit margins, inventory holding timeline, and retail conversion.
-          </p>
+      {/* 1. Header Bar */}
+      <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
+        <div className="flex items-center space-x-3">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight">
+            Statistics
+          </h1>
+          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            <Zap className="w-3 h-3 text-blue-600" />
+            <span>Live</span>
+          </span>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-2.5">
-          <div className="flex items-center p-1 bg-slate-100 rounded-2xl text-xs font-bold border border-slate-200">
-            <button
-              onClick={() => setTimeFilter('all')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                timeFilter === 'all'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              All Time
-            </button>
-            <button
-              onClick={() => setTimeFilter('month')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                timeFilter === 'month'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              This Month
-            </button>
-            <button
-              onClick={() => setTimeFilter('quarter')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                timeFilter === 'quarter'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Quarter
-            </button>
-          </div>
-
+        <div className="flex items-center space-x-2">
           <button
             onClick={loadData}
-            title="Refresh latest stats"
+            title="Refresh"
             className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs transition-all cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
@@ -184,7 +145,7 @@ export const StatisticsMain: React.FC = () => {
 
           <button
             onClick={handlePrint}
-            title="Print executive report"
+            title="Print"
             className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs transition-all cursor-pointer"
           >
             <Printer className="w-4 h-4" />
