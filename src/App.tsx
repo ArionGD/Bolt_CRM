@@ -19,6 +19,7 @@ import { OverviewMain } from './modules/overview/overview_main';
 import { InventoryMain } from './modules/inventory/inventory_main';
 import { CustomerMain } from './modules/customer/customer_main';
 import { SalesMain } from './modules/sales/sales_main';
+import { ServiceMain } from './modules/service/service_main';
 import { StatisticsMain } from './modules/statistics/statistics_main';
 
 // Auth & Customer Portal Pages
@@ -91,7 +92,11 @@ export const App: React.FC = () => {
             <Route path="orders" element={<Navigate to="/crm/sales?tab=orders" replace />} />
             <Route path="orders/:id" element={<LegacyOrderRedirect />} />
 
-            {/* 5. Statistics Tab (Reports, Ageing & Analytics) */}
+            {/* 5. Service Tab (Manage & Report Sub-Tabs) */}
+            <Route path="service" element={<ServiceMain />} />
+            <Route path="service/:subtab" element={<ServiceMain />} />
+
+            {/* 6. Statistics Tab (Reports, Ageing & Analytics) */}
             <Route path="statistics" element={<StatisticsMain />} />
             <Route path="reports" element={<Navigate to="/crm/statistics" replace />} />
           </Route>

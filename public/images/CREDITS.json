@@ -1,0 +1,27 @@
+{
+  "erickshaw.jpg": {
+    "source": "https://commons.wikimedia.org/wiki/File:Premium_G10_manufactured_by_GVM.jpg",
+    "author": "Techbla",
+    "license": "CC BY-SA 4.0"
+  },
+  "hero-1.jpg": {
+    "source": "Supplied by Trisha Motors",
+    "author": "\u2014",
+    "license": "Supplied by client"
+  },
+  "hero-2.jpg": {
+    "source": "Supplied by Trisha Motors",
+    "author": "\u2014",
+    "license": "Supplied by client"
+  },
+  "hero-3.jpg": {
+    "source": "Supplied by Trisha Motors",
+    "author": "\u2014",
+    "license": "Supplied by client"
+  },
+  "prize-phone.png": {
+    "source": "Supplied by Trisha Motors (cropped)",
+    "author": "\u2014",
+    "license": "Supplied by client \u2014 Apple product render"
+  }
+}

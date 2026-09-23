@@ -308,11 +308,11 @@ export const BookTestDrive: React.FC = () => {
             <div className="pt-4 border-t border-white/10 space-y-2 text-xs">
               <div className="font-bold text-slate-300">Showroom Address:</div>
               <p className="text-slate-400">
-                Plot 42, Green Energy Corridor, EV Highway Junction, Bengaluru, Karnataka 560001
+                Jamo Road, Baharia, Siwan, Bihar
               </p>
               <div className="flex items-center space-x-2 text-brand-400 font-bold pt-1">
                 <Phone className="w-3.5 h-3.5" />
-                <span>+91 98000 11111</span>
+                <span>082941 73308</span>
               </div>
             </div>
           </div>

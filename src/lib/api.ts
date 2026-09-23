@@ -14,6 +14,7 @@ import {
   TestDrive,
   Vehicle,
   VehicleModel,
+  ServiceJob,
 } from '../types';
 import {
   MOCK_ACCOUNTS,
@@ -25,6 +26,7 @@ import {
   MOCK_QUOTATIONS,
   MOCK_TEST_DRIVES,
   MOCK_VEHICLES,
+  MOCK_SERVICES,
 } from './mockData';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
@@ -41,6 +43,7 @@ const STORAGE_KEYS = {
   TEST_DRIVES: 'trisha_crm_test_drives',
   PAYMENTS: 'trisha_crm_payments',
   MODELS: 'trisha_crm_models',
+  SERVICES: 'trisha_crm_services',
 };
 
 // Purge any legacy demo/mock data keys so CRM starts completely clean
@@ -1330,5 +1333,72 @@ export const api = {
       token: 'demo-customer-token',
       user: acc,
     };
+  },
+
+  // --- Service Center & Workshop Methods ---
+  async getServiceJobs(): Promise<ServiceJob[]> {
+    try {
+      const token = localStorage.getItem('volt_token') || 'demo-admin-token';
+      const res = await fetch(`${API_BASE_URL}/services`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) return await res.json();
+    } catch {
+      // Fallback
+    }
+    return getStored<ServiceJob>(STORAGE_KEYS.SERVICES, MOCK_SERVICES);
+  },
+
+  async createServiceJob(
+    data: Omit<ServiceJob, 'id' | 'job_card_no' | 'created_at'> & {
+      job_card_no?: string;
+    }
+  ): Promise<ServiceJob> {
+    const jobs = getStored<ServiceJob>(STORAGE_KEYS.SERVICES, MOCK_SERVICES);
+    const count = jobs.length + 1;
+    const pad = String(count).padStart(3, '0');
+    const jobCard = data.job_card_no || `SRV-${new Date().getFullYear()}-${pad}`;
+
+    const newJob: ServiceJob = {
+      ...data,
+      id: 'srv_' + Date.now(),
+      job_card_no: jobCard,
+      created_at: new Date().toISOString(),
+    };
+
+    jobs.unshift(newJob);
+    setStored(STORAGE_KEYS.SERVICES, jobs);
+    return newJob;
+  },
+
+  async updateServiceJob(id: string, updates: Partial<ServiceJob>): Promise<ServiceJob> {
+    const jobs = getStored<ServiceJob>(STORAGE_KEYS.SERVICES, MOCK_SERVICES);
+    const idx = jobs.findIndex((j) => j.id === id);
+    if (idx === -1) throw new Error('Service job not found');
+
+    const updated: ServiceJob = {
+      ...jobs[idx],
+      ...updates,
+    };
+
+    // Recompute total & balance if parts or labour changed
+    if (updates.parts_used || updates.labour_charges !== undefined || updates.paid_amount !== undefined) {
+      const partsTotal = updated.parts_used.reduce((sum, p) => sum + p.total_cost, 0);
+      const misc = updated.miscellaneous_charges || 0;
+      const disc = updated.discount || 0;
+      updated.parts_total_cost = partsTotal;
+      updated.total_amount = partsTotal + updated.labour_charges + misc - disc;
+      updated.balance_due = Math.max(0, updated.total_amount - (updated.paid_amount || 0));
+    }
+
+    jobs[idx] = updated;
+    setStored(STORAGE_KEYS.SERVICES, jobs);
+    return updated;
+  },
+
+  async deleteServiceJob(id: string): Promise<void> {
+    const jobs = getStored<ServiceJob>(STORAGE_KEYS.SERVICES, MOCK_SERVICES);
+    const filtered = jobs.filter((j) => j.id !== id);
+    setStored(STORAGE_KEYS.SERVICES, filtered);
   },
 };

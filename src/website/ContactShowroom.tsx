@@ -50,7 +50,7 @@ export const ContactShowroom: React.FC = () => {
           </div>
           <h3 className="font-extrabold text-base text-slate-900">Showroom Address</h3>
           <p className="text-xs text-slate-500 leading-relaxed">
-            Plot 42, Green Energy Corridor, EV Highway Junction, Bengaluru, Karnataka 560001
+            Jamo Road, Baharia, Siwan, Bihar
           </p>
           <div className="pt-2">
             <span className="text-[11px] font-mono font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded">
@@ -68,7 +68,7 @@ export const ContactShowroom: React.FC = () => {
             Open 7 days a week for walk-ins, test rides, and spot delivery processing.
           </p>
           <div className="pt-2 text-xs font-bold text-slate-900 space-y-1">
-            <div>Monday – Sunday: 9:00 AM – 8:30 PM</div>
+            <div>Monday – Saturday: 9:00 AM – 10:00 PM</div>
             <div className="text-emerald-600 text-[11px]">Service Bay: 9:30 AM – 7:00 PM</div>
           </div>
         </div>
@@ -82,7 +82,7 @@ export const ContactShowroom: React.FC = () => {
             Reach our sales desk or commercial fleet manager directly during business hours.
           </p>
           <div className="pt-2 text-xs font-mono space-y-1">
-            <div className="font-bold text-slate-900">Sales: +91 98000 11111</div>
+            <div className="font-bold text-slate-900">Sales: 082941 73308</div>
             <div className="font-bold text-sky-700">Commercial: +91 98000 22222</div>
           </div>
         </div>
@@ -223,7 +223,7 @@ export const ContactShowroom: React.FC = () => {
                   <span className="font-bold text-white">Showroom is Currently Open</span>
                 </div>
                 <p className="text-slate-400 text-[11px]">
-                  Plot 42, Green Energy Corridor, Junction 3, Outer Ring Road, Bengaluru 560001
+                  Jamo Road, Baharia, Siwan, Bihar
                 </p>
               </div>
             </div>

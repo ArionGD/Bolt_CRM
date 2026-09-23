@@ -40,11 +40,14 @@ import {
   Search,
   Package,
   IndianRupee,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface OrdersSubPageProps {
-  salesCategory?: 'vehicle' | 'component';
-  onCategoryChange?: (category: 'vehicle' | 'component') => void;
+  salesCategory?: 'all' | 'vehicle' | 'component';
+  onCategoryChange?: (category: 'all' | 'vehicle' | 'component') => void;
 }
 
 export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
@@ -59,11 +62,23 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
   const [components, setComponents] = useState<ComponentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'daily_timeline' | 'table'>('daily_timeline');
+  const [viewMode, setViewMode] = useState<'table' | 'daily_timeline'>('table');
   const [showBookModal, setShowBookModal] = useState(false);
   const [showAllDays, setShowAllDays] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Filter Block States
+  const [customerQuery, setCustomerQuery] = useState('');
+  const [itemQuery, setItemQuery] = useState('');
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState<'all' | 'scooter' | 'rickshaw'>('all');
+  const [componentCategoryFilter, setComponentCategoryFilter] = useState<string>('all');
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [paymentModeFilter, setPaymentModeFilter] = useState<'all' | 'cash' | 'finance' | 'lease'>('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<'all' | 'settled' | 'due'>('all');
+  const [datePreset, setDatePreset] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
 
   // ==========================================
   // POS Checkout Form State
@@ -364,9 +379,9 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
   // Open Modal with first available vehicle or component
   const handleOpenModal = () => {
     resetFormState();
-    setPickerTab(activeCategory);
+    setPickerTab(activeCategory === 'component' ? 'component' : 'vehicle');
     setShowBookModal(true);
-    if (activeCategory === 'vehicle' && availableVehicles.length > 0) {
+    if (activeCategory !== 'component' && availableVehicles.length > 0) {
       handleSelectVehicleToPick(availableVehicles[0].id);
     } else if (activeCategory === 'component' && availableComponents.length > 0) {
       handleSelectComponentToPick(availableComponents[0].id);
@@ -447,23 +462,124 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
     return Boolean(o.component_count && o.component_count > 0);
   };
 
-  const activeCategory =
+  const activeCategory: 'all' | 'vehicle' | 'component' =
     salesCategory ||
-    (searchParams.get('type') === 'component' ? 'component' : 'vehicle');
+    (searchParams.get('type') === 'component'
+      ? 'component'
+      : searchParams.get('type') === 'vehicle'
+      ? 'vehicle'
+      : 'all');
 
-  const categoryOrders = orders.filter((o) => {
-    if (activeCategory === 'vehicle') return isVehicleOrder(o);
-    if (activeCategory === 'component') return isComponentOrder(o);
+  // Multi-tier filtering
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const thisMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const filtered = orders.filter((o) => {
+    // 1. Category filter (top level)
+    if (activeCategory === 'vehicle' && !isVehicleOrder(o)) return false;
+    if (activeCategory === 'component' && !isComponentOrder(o)) return false;
+
+    // 2. Customer query
+    if (customerQuery.trim()) {
+      const q = customerQuery.trim().toLowerCase();
+      const matchName = o.customer_name?.toLowerCase().includes(q);
+      const matchPhone = o.customer_phone?.toLowerCase().includes(q);
+      if (!matchName && !matchPhone) return false;
+    }
+
+    // 3. Item query (model name, vin, part name, sku)
+    if (itemQuery.trim()) {
+      const q = itemQuery.trim().toLowerCase();
+      let match = false;
+      if (o.items && o.items.length > 0) {
+        match = o.items.some(
+          (it) =>
+            it.name.toLowerCase().includes(q) ||
+            (it.sku_or_vin && it.sku_or_vin.toLowerCase().includes(q))
+        );
+      } else {
+        match = Boolean(
+          o.model_name?.toLowerCase().includes(q) ||
+          o.brand?.toLowerCase().includes(q) ||
+          (o.vin && o.vin.toLowerCase().includes(q))
+        );
+      }
+      if (!match) return false;
+    }
+
+    // 4. Vehicle sub-type filter
+    if (vehicleTypeFilter !== 'all') {
+      if (vehicleTypeFilter === 'scooter') {
+        const hasScooter =
+          o.items && o.items.length > 0
+            ? o.items.some((it) => it.item_type === 'vehicle' && it.category === 'E-Scooter')
+            : o.vehicle_type === 'scooter' || !o.model_name?.toLowerCase().includes('rickshaw');
+        if (!hasScooter) return false;
+      } else if (vehicleTypeFilter === 'rickshaw') {
+        const hasRick =
+          o.items && o.items.length > 0
+            ? o.items.some((it) => it.item_type === 'vehicle' && it.category === 'E-Rickshaw')
+            : o.vehicle_type === 'rickshaw' || o.model_name?.toLowerCase().includes('rickshaw');
+        if (!hasRick) return false;
+      }
+    }
+
+    // 5. Component category filter
+    if (componentCategoryFilter !== 'all') {
+      const targetCat = componentCategoryFilter.toLowerCase();
+      const hasComp =
+        o.items && o.items.length > 0
+          ? o.items.some(
+              (it) =>
+                it.item_type === 'component' &&
+                (it.category?.toLowerCase() === targetCat ||
+                  it.name?.toLowerCase().includes(targetCat))
+            )
+          : false;
+      if (!hasComp) return false;
+    }
+
+    // 6. Order Status filter
+    if (statusFilter !== 'all' && o.status !== statusFilter) {
+      return false;
+    }
+
+    // 7. Payment Mode filter
+    if (paymentModeFilter !== 'all' && o.payment_mode !== paymentModeFilter) {
+      return false;
+    }
+
+    // 8. Payment Settlement filter
+    if (paymentStatusFilter === 'settled' && (o.balance_due || 0) > 0) {
+      return false;
+    }
+    if (paymentStatusFilter === 'due' && (o.balance_due || 0) <= 0) {
+      return false;
+    }
+
+    // 9. Date Presets
+    if (datePreset === 'today' && !o.booking_date?.startsWith(todayStr)) {
+      return false;
+    }
+    if (datePreset === 'week' && (o.booking_date || '') < weekAgo) {
+      return false;
+    }
+    if (datePreset === 'month' && !o.booking_date?.startsWith(thisMonthPrefix)) {
+      return false;
+    }
+
+    // 10. Selected Calendar Date filter
+    if (selectedCalendarDate && !o.booking_date?.startsWith(selectedCalendarDate)) {
+      return false;
+    }
+
     return true;
   });
 
-  const filtered = categoryOrders.filter((o) => {
-    if (statusFilter === 'all') return true;
-    return o.status === statusFilter;
-  });
-
-  // Summary Metrics
-  const totalScooters = orders.reduce((sum, o) => {
+  // Summary Metrics strictly calculated from filtered
+  const totalScooters = filtered.reduce((sum, o) => {
     if (o.items && o.items.length > 0) {
       return (
         sum +
@@ -474,10 +590,10 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
     }
     const isRick =
       o.vehicle_type === 'rickshaw' || o.model_name?.toLowerCase().includes('rickshaw');
-    return sum + (isRick ? 0 : 1);
+    return isVehicleOrder(o) && !isRick ? sum + 1 : sum;
   }, 0);
 
-  const totalRickshaws = orders.reduce((sum, o) => {
+  const totalRickshaws = filtered.reduce((sum, o) => {
     if (o.items && o.items.length > 0) {
       return (
         sum +
@@ -488,10 +604,10 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
     }
     const isRick =
       o.vehicle_type === 'rickshaw' || o.model_name?.toLowerCase().includes('rickshaw');
-    return sum + (isRick ? 1 : 0);
+    return isVehicleOrder(o) && isRick ? sum + 1 : sum;
   }, 0);
 
-  const totalComponents = orders.reduce((sum, o) => {
+  const totalComponents = filtered.reduce((sum, o) => {
     if (o.items && o.items.length > 0) {
       return (
         sum +
@@ -503,7 +619,7 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
     return sum + (o.component_count || 0);
   }, 0);
 
-  const totalBatteries = orders.reduce((sum, o) => {
+  const totalBatteries = filtered.reduce((sum, o) => {
     if (o.items && o.items.length > 0) {
       return (
         sum +
@@ -511,7 +627,7 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
           .filter(
             (it) =>
               it.item_type === 'component' &&
-              (it.category === 'batteries' || it.name.toLowerCase().includes('battery'))
+              (it.category?.toLowerCase() === 'batteries' || it.name.toLowerCase().includes('battery'))
           )
           .reduce((s, it) => s + it.quantity, 0)
       );
@@ -519,7 +635,7 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
     return sum;
   }, 0);
 
-  const totalMotorsAndChargers = orders.reduce((sum, o) => {
+  const totalMotorsAndChargers = filtered.reduce((sum, o) => {
     if (o.items && o.items.length > 0) {
       return (
         sum +
@@ -527,8 +643,8 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
           .filter(
             (it) =>
               it.item_type === 'component' &&
-              (it.category === 'motors' ||
-                it.category === 'chargers' ||
+              (it.category?.toLowerCase() === 'motors' ||
+                it.category?.toLowerCase() === 'chargers' ||
                 it.name.toLowerCase().includes('motor') ||
                 it.name.toLowerCase().includes('charger'))
           )
@@ -538,67 +654,484 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
     return sum;
   }, 0);
 
-  const vehicleRevenue = orders.reduce((sum, o) => {
-    if (o.items && o.items.length > 0) {
-      const vItems = o.items.filter((it) => it.item_type === 'vehicle');
-      if (vItems.length > 0) {
-        return sum + vItems.reduce((s, it) => s + it.total_amount, 0);
-      }
-      return sum;
-    }
-    if (isVehicleOrder(o)) return sum + Number(o.total_amount || 0);
-    return sum;
+  const filteredRevenue = filtered.reduce((sum, o) => {
+    return sum + Number(o.total_amount || 0);
   }, 0);
 
-  const vehicleProfit = orders.reduce((sum, o) => {
-    if (o.items && o.items.length > 0) {
-      const vItems = o.items.filter((it) => it.item_type === 'vehicle');
-      if (vItems.length > 0) {
-        return sum + vItems.reduce((s, it) => s + it.total_profit, 0);
-      }
-      return sum;
-    }
-    if (isVehicleOrder(o)) {
-      if (o.net_profit !== undefined) return sum + Number(o.net_profit);
-      const sold = Number(o.sold_price || o.total_amount);
-      const init = Number(o.initial_price || Math.round(sold * 0.88));
-      const misc = Number(o.miscellaneous_charges || 0);
-      return sum + (sold - init + misc);
-    }
-    return sum;
+  const filteredProfit = filtered.reduce((sum, o) => {
+    if (o.net_profit !== undefined) return sum + Number(o.net_profit);
+    const sold = Number(o.sold_price || o.total_amount || 0);
+    const init = Number(o.initial_price || Math.round(sold * 0.88));
+    const misc = Number(o.miscellaneous_charges || 0);
+    return sum + (sold - init + misc);
   }, 0);
 
-  const compRevenue = orders.reduce((sum, o) => {
-    if (o.items && o.items.length > 0) {
-      const cItems = o.items.filter((it) => it.item_type === 'component');
-      return sum + cItems.reduce((s, it) => s + it.total_amount, 0);
-    }
-    if (o.component_count && !o.vehicle_id) return sum + Number(o.total_amount || 0);
-    return sum;
-  }, 0);
+  // Check if any filter is active
+  const isAnyFilterActive = Boolean(
+    customerQuery ||
+      itemQuery ||
+      vehicleTypeFilter !== 'all' ||
+      componentCategoryFilter !== 'all' ||
+      statusFilter !== 'all' ||
+      paymentModeFilter !== 'all' ||
+      paymentStatusFilter !== 'all' ||
+      datePreset !== 'all' ||
+      selectedCalendarDate
+  );
 
-  const compProfit = orders.reduce((sum, o) => {
-    if (o.items && o.items.length > 0) {
-      const cItems = o.items.filter((it) => it.item_type === 'component');
-      return sum + cItems.reduce((s, it) => s + it.total_profit, 0);
-    }
-    if (o.component_count && !o.vehicle_id) {
-      return sum + Number(o.net_profit || Math.round(Number(o.total_amount || 0) * 0.25));
-    }
-    return sum;
-  }, 0);
+  const resetAllFilters = () => {
+    setCustomerQuery('');
+    setItemQuery('');
+    setVehicleTypeFilter('all');
+    setComponentCategoryFilter('all');
+    setStatusFilter('all');
+    setPaymentModeFilter('all');
+    setPaymentStatusFilter('all');
+    setDatePreset('all');
+    setSelectedCalendarDate(null);
+  };
 
-  // Timeline list (sorted descending to show latest days first)
-  const timelineDays = [...dailySales].reverse();
-  const visibleTimelineDays = showAllDays
-    ? timelineDays
-    : timelineDays.filter((d) => d.total_units > 0 || timelineDays.indexOf(d) < 7);
+  // Calendar Heatmap Data
+  const salesCountByDate = orders.reduce<Record<string, number>>((acc, o) => {
+    if (activeCategory === 'vehicle' && !isVehicleOrder(o)) return acc;
+    if (activeCategory === 'component' && !isComponentOrder(o)) return acc;
+    const dateKey = o.booking_date ? o.booking_date.split('T')[0] : '';
+    if (dateKey) {
+      acc[dateKey] = (acc[dateKey] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const calYear = calendarMonth.getFullYear();
+  const calMonth = calendarMonth.getMonth();
+  const calFirstDayIndex = new Date(calYear, calMonth, 1).getDay(); // 0 = Sun
+  const calDaysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const calDaysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+
+  const calMonthDays: Array<{ dateStr: string; dayNum: number; isCurrentMonth: boolean }> = [];
+
+  // Trailing previous month days
+  for (let i = calFirstDayIndex - 1; i >= 0; i--) {
+    const d = calDaysInPrevMonth - i;
+    const prevM = calMonth === 0 ? 11 : calMonth - 1;
+    const prevY = calMonth === 0 ? calYear - 1 : calYear;
+    const dateStr = `${prevY}-${String(prevM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    calMonthDays.push({ dateStr, dayNum: d, isCurrentMonth: false });
+  }
+
+  // Current month days
+  for (let d = 1; d <= calDaysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    calMonthDays.push({ dateStr, dayNum: d, isCurrentMonth: true });
+  }
+
+  // Leading next month days
+  const calRemaining = (7 - (calMonthDays.length % 7)) % 7;
+  for (let d = 1; d <= calRemaining; d++) {
+    const nextM = calMonth === 11 ? 0 : calMonth + 1;
+    const nextY = calMonth === 11 ? calYear + 1 : calYear;
+    const dateStr = `${nextY}-${String(nextM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    calMonthDays.push({ dateStr, dayNum: d, isCurrentMonth: false });
+  }
+
+  // 1-Week past days for Timeline (past 7 days including current day)
+  const past7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    return d.toISOString().split('T')[0];
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Top Action Bar with View Toggle and New Retail Sale Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-5">
+      {/* 1. TOP SUMMARY METRIC CARDS (Dynamically linked to filtered records) */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {activeCategory === 'vehicle' ? (
+          <>
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Scooties (2W)</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalScooters} Units</div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Rickshaws (3W)</span>
+                <span className="w-2 h-2 rounded-full bg-sky-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalRickshaws} Units</div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Total Vehicles</span>
+                <span className="w-2 h-2 rounded-full bg-brand-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                {totalScooters + totalRickshaws} Units
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Revenue (₹)</span>
+                <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                ₹{filteredRevenue.toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-emerald-50/50 rounded-2xl border border-emerald-200 shadow-sm col-span-2 sm:col-span-1">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                <span>Profit (₹)</span>
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-black text-emerald-700 mt-1">
+                +₹{filteredProfit.toLocaleString('en-IN')}
+              </div>
+            </div>
+          </>
+        ) : activeCategory === 'component' ? (
+          <>
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Batteries</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalBatteries} Units</div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Motors & Chargers</span>
+                <span className="w-2 h-2 rounded-full bg-sky-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                {totalMotorsAndChargers} Units
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Total Spares</span>
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalComponents} Pcs</div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Revenue (₹)</span>
+                <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                ₹{filteredRevenue.toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-emerald-50/50 rounded-2xl border border-emerald-200 shadow-sm col-span-2 sm:col-span-1">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                <span>Profit (₹)</span>
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-black text-emerald-700 mt-1">
+                +₹{filteredProfit.toLocaleString('en-IN')}
+              </div>
+            </div>
+          </>
+        ) : (
+          /* "All" Sales Mode (Combined Vehicle + Parts) */
+          <>
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Vehicles Sold</span>
+                <span className="w-2 h-2 rounded-full bg-brand-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                {totalScooters + totalRickshaws} Units
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Components Sold</span>
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{totalComponents} Pcs</div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Total Orders</span>
+                <span className="w-2 h-2 rounded-full bg-slate-400" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{filtered.length} Orders</div>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Revenue (₹)</span>
+                <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                ₹{filteredRevenue.toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-emerald-50/50 rounded-2xl border border-emerald-200 shadow-sm col-span-2 sm:col-span-1">
+              <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
+                <span>Profit (₹)</span>
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-black text-emerald-700 mt-1">
+                +₹{filteredProfit.toLocaleString('en-IN')}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* 2. COMPLETE FILTER BLOCK */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3.5 space-y-3">
+        {/* Primary Filter Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5 items-center">
+          {/* Filter 1: Customer Name or Phone */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Customer name or mobile..."
+              value={customerQuery}
+              onChange={(e) => setCustomerQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium transition-all"
+            />
+          </div>
+
+          {/* Filter 2: Vehicle Model or Component Name */}
+          <div className="relative">
+            <Tag className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder={
+                activeCategory === 'vehicle'
+                  ? 'Vehicle model or VIN...'
+                  : activeCategory === 'component'
+                  ? 'Part name or SKU...'
+                  : 'Vehicle model or part name...'
+              }
+              value={itemQuery}
+              onChange={(e) => setItemQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium transition-all"
+            />
+          </div>
+
+          {/* Filter 3: Sub-type (Vehicle EV Type or Component Category) */}
+          {activeCategory === 'vehicle' ? (
+            <select
+              value={vehicleTypeFilter}
+              onChange={(e) => setVehicleTypeFilter(e.target.value as any)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium text-slate-700 cursor-pointer"
+            >
+              <option value="all">All Vehicle Types</option>
+              <option value="scooter">Electric Scooty (2W)</option>
+              <option value="rickshaw">Electric Rickshaw (3W)</option>
+            </select>
+          ) : activeCategory === 'component' ? (
+            <select
+              value={componentCategoryFilter}
+              onChange={(e) => setComponentCategoryFilter(e.target.value)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium text-slate-700 cursor-pointer"
+            >
+              <option value="all">All Categories</option>
+              <option value="batteries">Batteries & BMS</option>
+              <option value="motors">Motors & Drivetrain</option>
+              <option value="chargers">Fast Chargers</option>
+              <option value="controllers">Motor Controllers</option>
+              <option value="brakes">Brakes & Suspension</option>
+              <option value="electrical">Lighting & Wire Harness</option>
+            </select>
+          ) : (
+            <select
+              value={vehicleTypeFilter}
+              onChange={(e) => setVehicleTypeFilter(e.target.value as any)}
+              className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium text-slate-700 cursor-pointer"
+            >
+              <option value="all">All Product Subtypes</option>
+              <option value="scooter">Scooties (2W)</option>
+              <option value="rickshaw">Rickshaws (3W)</option>
+            </select>
+          )}
+
+          {/* Filter 4: Order Status */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 font-medium text-slate-700 cursor-pointer"
+          >
+            <option value="all">All Order Statuses</option>
+            <option value="booked">Booked</option>
+            <option value="payment_pending">Payment Pending</option>
+            <option value="ready_for_delivery">Ready for Delivery</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+
+          {/* More Filters Toggle & New Sale Button */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setShowMoreFilters(!showMoreFilters)}
+              className={`flex-1 flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                showMoreFilters || paymentModeFilter !== 'all' || paymentStatusFilter !== 'all' || datePreset !== 'all' || selectedCalendarDate
+                  ? 'bg-brand-50 text-brand-700 border-brand-200'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              <span>More</span>
+              {showMoreFilters ? (
+                <ChevronUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            <button
+              onClick={handleOpenModal}
+              className="inline-flex items-center px-3.5 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 shadow-sm transition-all cursor-pointer whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              <span>New Sale</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded More Filters Row */}
+        {showMoreFilters && (
+          <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-4 gap-2.5 items-center">
+            {/* Payment Mode */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Payment Mode
+              </label>
+              <select
+                value={paymentModeFilter}
+                onChange={(e) => setPaymentModeFilter(e.target.value as any)}
+                className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-700 cursor-pointer"
+              >
+                <option value="all">All Modes</option>
+                <option value="cash">Cash / Direct UPI</option>
+                <option value="finance">Bank Finance</option>
+                <option value="lease">Lease Plan</option>
+              </select>
+            </div>
+
+            {/* Payment Settlement */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Settlement Status
+              </label>
+              <select
+                value={paymentStatusFilter}
+                onChange={(e) => setPaymentStatusFilter(e.target.value as any)}
+                className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-700 cursor-pointer"
+              >
+                <option value="all">All Settlements</option>
+                <option value="settled">Fully Settled (₹0 Due)</option>
+                <option value="due">Balance Due</option>
+              </select>
+            </div>
+
+            {/* Date Preset */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Date Period
+              </label>
+              <select
+                value={datePreset}
+                onChange={(e) => setDatePreset(e.target.value as any)}
+                className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-700 cursor-pointer"
+              >
+                <option value="all">All Dates</option>
+                <option value="today">Today Only</option>
+                <option value="week">Past 7 Days</option>
+                <option value="month">This Month</option>
+              </select>
+            </div>
+
+            {/* Reset All Filters */}
+            <div className="flex items-end h-full">
+              <button
+                onClick={resetAllFilters}
+                disabled={!isAnyFilterActive}
+                className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  isAnyFilterActive
+                    ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                }`}
+              >
+                Reset All Filters
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Filtered Count & Active Tag Indicator */}
+        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+            <span className="font-semibold text-slate-700">
+              Showing <span className="font-bold text-brand-700">{filtered.length}</span> of {orders.length} transactions
+            </span>
+            {selectedCalendarDate && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                Date: {selectedCalendarDate}
+                <button
+                  onClick={() => setSelectedCalendarDate(null)}
+                  className="ml-1 text-brand-500 hover:text-brand-800"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {customerQuery && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                Customer: "{customerQuery}"
+              </span>
+            )}
+            {itemQuery && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                Item: "{itemQuery}"
+              </span>
+            )}
+          </div>
+
+          {isAnyFilterActive && (
+            <button
+              onClick={resetAllFilters}
+              className="text-[11px] font-bold text-brand-600 hover:text-brand-800 underline cursor-pointer"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 3. VIEW MODE TOGGLE (All Transactions Table first and default, Daily Timeline second) */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'table'
+                ? 'bg-white text-brand-700 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>All Transactions Table</span>
+          </button>
+
           <button
             onClick={() => setViewMode('daily_timeline')}
             className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -610,423 +1143,10 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
             <Calendar className="w-3.5 h-3.5" />
             <span>Daily Timeline</span>
           </button>
-
-          <button
-            onClick={() => setViewMode('table')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              viewMode === 'table'
-                ? 'bg-white text-brand-700 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>Transactions Table</span>
-          </button>
         </div>
-
-        <button
-          onClick={handleOpenModal}
-          className="inline-flex items-center px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 shadow-sm transition-all cursor-pointer ml-auto sm:ml-0"
-        >
-          <Plus className="w-4 h-4 mr-1.5" />
-          <span>New Retail Sale</span>
-        </button>
       </div>
 
-      {/* Summary Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        {activeCategory === 'vehicle' ? (
-          <>
-            {/* Card 1: Scooties */}
-            <div className="p-3.5 bg-white rounded-2xl border border-emerald-100 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
-                <span>Scooties (2W)</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              </div>
-              <div className="text-2xl font-black text-slate-900 mt-1">{totalScooters} Units</div>
-            </div>
-
-            {/* Card 2: Rickshaws */}
-            <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-sky-800">
-                <span>Rickshaws (3W)</span>
-                <span className="w-2 h-2 rounded-full bg-sky-500" />
-              </div>
-              <div className="text-2xl font-black text-slate-900 mt-1">{totalRickshaws} Units</div>
-            </div>
-
-            {/* Card 3: Total Vehicles */}
-            <div className="p-3.5 bg-white rounded-2xl border border-indigo-100 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-indigo-800">
-                <span>Total Vehicles</span>
-                <span className="w-2 h-2 rounded-full bg-indigo-500" />
-              </div>
-              <div className="text-2xl font-black text-slate-900 mt-1">{totalScooters + totalRickshaws} Units</div>
-            </div>
-
-            {/* Card 4: Revenue */}
-            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-                <span>Revenue (₹)</span>
-                <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
-              </div>
-              <div className="text-2xl font-black text-sky-800 mt-1">
-                ₹{vehicleRevenue.toLocaleString('en-IN')}
-              </div>
-            </div>
-
-            {/* Card 5: Profit */}
-            <div className="p-3.5 bg-white rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm col-span-2 sm:col-span-1">
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                <span>Profit (₹)</span>
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              </div>
-              <div className="text-2xl font-black text-emerald-700 mt-1">
-                +₹{vehicleProfit.toLocaleString('en-IN')}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Card 1: Batteries */}
-            <div className="p-3.5 bg-white rounded-2xl border border-emerald-100 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-800">
-                <span>Batteries</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              </div>
-              <div className="text-2xl font-black text-slate-900 mt-1">{totalBatteries} Units</div>
-            </div>
-
-            {/* Card 2: Motors & Chargers */}
-            <div className="p-3.5 bg-white rounded-2xl border border-sky-100 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-sky-800">
-                <span>Motors & Chargers</span>
-                <span className="w-2 h-2 rounded-full bg-sky-500" />
-              </div>
-              <div className="text-2xl font-black text-slate-900 mt-1">{totalMotorsAndChargers} Units</div>
-            </div>
-
-            {/* Card 3: Total Spares */}
-            <div className="p-3.5 bg-white rounded-2xl border border-purple-100 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-purple-800">
-                <span>Total Spares</span>
-                <span className="w-2 h-2 rounded-full bg-purple-500" />
-              </div>
-              <div className="text-2xl font-black text-slate-900 mt-1">{totalComponents} Pcs</div>
-            </div>
-
-            {/* Card 4: Revenue */}
-            <div className="p-3.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-600">
-                <span>Revenue (₹)</span>
-                <IndianRupee className="w-3.5 h-3.5 text-slate-400" />
-              </div>
-              <div className="text-2xl font-black text-sky-800 mt-1">
-                ₹{compRevenue.toLocaleString('en-IN')}
-              </div>
-            </div>
-
-            {/* Card 5: Profit */}
-            <div className="p-3.5 bg-white rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm col-span-2 sm:col-span-1">
-              <div className="flex items-center justify-between text-xs font-bold text-emerald-900">
-                <span>Profit (₹)</span>
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              </div>
-              <div className="text-2xl font-black text-emerald-700 mt-1">
-                +₹{compProfit.toLocaleString('en-IN')}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Filter Tabs for Status */}
-      <div className="flex items-center space-x-1.5 overflow-x-auto text-xs bg-white p-2.5 rounded-2xl border border-slate-200 shadow-sm">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">Status:</span>
-        {['all', 'booked', 'payment_pending', 'ready_for_delivery', 'delivered'].map((st) => (
-          <button
-            key={st}
-            onClick={() => setStatusFilter(st)}
-            className={`px-3 py-1 rounded-lg font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
-              statusFilter === st ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {st.replace('_', ' ')}
-          </button>
-        ))}
-      </div>
-
-      {/* VIEW 1: DAY-BY-DAY DAILY TIMELINE */}
-      {viewMode === 'daily_timeline' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-              Continuous Daily Sales Ledger
-            </span>
-            <button
-              onClick={() => setShowAllDays(!showAllDays)}
-              className="text-xs font-bold text-brand-600 hover:text-brand-800 transition-colors cursor-pointer flex items-center space-x-1"
-            >
-              <span>{showAllDays ? 'Show Active & Recent Days' : 'Show Full 14-Day Calendar Timeline'}</span>
-              {showAllDays ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="p-8 text-center text-slate-500 bg-white rounded-2xl border border-slate-200">
-              Loading daily timeline...
-            </div>
-          ) : visibleTimelineDays.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
-              <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-40" />
-              <p className="font-semibold text-slate-700">No Sales Records Found</p>
-              <p className="text-xs text-slate-500 mt-1">Record a sale to map the first calendar day.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {visibleTimelineDays.map((day) => {
-                const dayOrders = day.orders.filter((o) =>
-                  activeCategory === 'vehicle' ? isVehicleOrder(o) : isComponentOrder(o)
-                );
-                const dayUnits = dayOrders.reduce((sum, o) => {
-                  if (activeCategory === 'vehicle') {
-                    if (o.items && o.items.length > 0) {
-                      return (
-                        sum +
-                        o.items
-                          .filter((it) => it.item_type === 'vehicle')
-                          .reduce((s, it) => s + it.quantity, 0)
-                      );
-                    }
-                    return sum + 1;
-                  } else {
-                    if (o.items && o.items.length > 0) {
-                      return (
-                        sum +
-                        o.items
-                          .filter((it) => it.item_type === 'component')
-                          .reduce((s, it) => s + it.quantity, 0)
-                      );
-                    }
-                    return sum + (o.component_count || 1);
-                  }
-                }, 0);
-                const dayRevenue = dayOrders.reduce((sum, o) => {
-                  if (activeCategory === 'vehicle') {
-                    if (o.items && o.items.length > 0) {
-                      const vItems = o.items.filter((it) => it.item_type === 'vehicle');
-                      return sum + vItems.reduce((s, it) => s + it.total_amount, 0);
-                    }
-                    return sum + Number(o.total_amount || 0);
-                  } else {
-                    if (o.items && o.items.length > 0) {
-                      const cItems = o.items.filter((it) => it.item_type === 'component');
-                      return sum + cItems.reduce((s, it) => s + it.total_amount, 0);
-                    }
-                    return sum + Number(o.total_amount || 0);
-                  }
-                }, 0);
-                const dayProfit = dayOrders.reduce((sum, o) => {
-                  if (activeCategory === 'vehicle') {
-                    if (o.items && o.items.length > 0) {
-                      const vItems = o.items.filter((it) => it.item_type === 'vehicle');
-                      return sum + vItems.reduce((s, it) => s + it.total_profit, 0);
-                    }
-                    if (o.net_profit !== undefined) return sum + Number(o.net_profit);
-                    const sold = Number(o.sold_price || o.total_amount);
-                    const init = Number(o.initial_price || Math.round(sold * 0.88));
-                    return sum + (sold - init);
-                  } else {
-                    if (o.items && o.items.length > 0) {
-                      const cItems = o.items.filter((it) => it.item_type === 'component');
-                      return sum + cItems.reduce((s, it) => s + it.total_profit, 0);
-                    }
-                    return sum + Number(o.net_profit || 0);
-                  }
-                }, 0);
-                const hasSales = dayUnits > 0;
-                return (
-                  <div
-                    key={day.date}
-                    className={`rounded-2xl border transition-all ${
-                      hasSales
-                        ? 'bg-white border-slate-200 shadow-sm p-4'
-                        : 'bg-slate-50/60 border-slate-200/70 p-3 opacity-75'
-                    }`}
-                  >
-                    {/* Day Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shadow-sm ${
-                            hasSales
-                              ? 'bg-brand-600 text-white'
-                              : 'bg-slate-200 text-slate-500'
-                          }`}
-                        >
-                          {day.day_of_week}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-extrabold text-sm text-slate-900">
-                              {day.date_label}
-                            </span>
-                            {hasSales ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">
-                                {dayUnits} {dayUnits === 1 ? 'sale' : 'sales'}
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">
-                                0 sales
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
-                            {hasSales ? (
-                              <span>
-                                {activeCategory === 'vehicle'
-                                  ? `${day.scooter_units} Scooties • ${day.rickshaw_units} E-Rickshaws`
-                                  : `${dayUnits} Components & Spares`}
-                              </span>
-                            ) : (
-                              <span>No {activeCategory} sales on this date</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Day Financial Metrics */}
-                      {hasSales && (
-                        <div className="flex items-center space-x-6 text-right pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                          <div>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">Day Revenue</span>
-                            <div className="font-mono font-black text-sky-800 text-sm">
-                              ₹{dayRevenue.toLocaleString('en-IN')}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">Net Profit</span>
-                            <div className="font-mono font-black text-emerald-700 text-sm">
-                              +₹{dayProfit.toLocaleString('en-IN')}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">Margin</span>
-                            <div className="font-bold text-xs text-slate-700">
-                              {dayRevenue > 0 ? ((dayProfit / dayRevenue) * 100).toFixed(1) : 0}%
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Customer Sales on this Day */}
-                    {hasSales && dayOrders.length > 0 && (
-                      <div className="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        {dayOrders.map((o) => {
-                          const isRick =
-                            o.vehicle_type === 'rickshaw' ||
-                            o.model_name?.toLowerCase().includes('rickshaw');
-                          const sold = Number(o.sold_price !== undefined ? o.sold_price : (o.total_amount || 0));
-                          const init = Number(o.initial_price !== undefined ? o.initial_price : Math.round(sold * 0.88));
-                          const misc = Number(o.miscellaneous_charges || 0);
-                          const prof = Number(o.net_profit !== undefined ? o.net_profit : (sold - init + misc));
-                          const margin = sold > 0 ? ((prof / sold) * 100).toFixed(1) : '0';
-
-                          return (
-                            <div
-                              key={o.id}
-                              className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-white hover:border-brand-200 transition-all text-xs"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <div className="flex items-center space-x-1.5">
-                                    <span className="font-bold text-slate-900">{o.customer_name}</span>
-                                    <span className="text-[10px] text-slate-400">({o.customer_phone})</span>
-                                  </div>
-                                  <div className="font-mono text-[10px] text-slate-500 mt-0.5">
-                                    {o.order_number}
-                                  </div>
-                                </div>
-
-                                <div className="text-right">
-                                  <div className="font-mono font-black text-emerald-700 text-xs">
-                                    +₹{prof.toLocaleString('en-IN')}
-                                  </div>
-                                  <span className="inline-block text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
-                                    {margin}% profit
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Multi-Item Breakdown Pills */}
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {o.items && o.items.length > 0 ? (
-                                  o.items.map((it) => (
-                                    <span
-                                      key={it.id}
-                                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                                        it.item_type === 'vehicle'
-                                          ? it.category === 'E-Rickshaw'
-                                            ? 'bg-sky-100 text-sky-800'
-                                            : 'bg-emerald-100 text-emerald-800'
-                                          : 'bg-purple-100 text-purple-800'
-                                      }`}
-                                    >
-                                      {it.quantity}x {it.name}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span
-                                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                                      isRick
-                                        ? 'bg-sky-100 text-sky-800'
-                                        : 'bg-emerald-100 text-emerald-800'
-                                    }`}
-                                  >
-                                    1x {o.brand} {o.model_name}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Card Footer Financial Summary */}
-                              <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-[11px]">
-                                <div>
-                                  <span className="text-slate-400">Total Bill: </span>
-                                  <span className="font-mono font-bold text-slate-800">
-                                    ₹{o.total_amount.toLocaleString('en-IN')}
-                                  </span>
-                                  {o.balance_due > 0 ? (
-                                    <span className="ml-2 font-bold text-sky-700">
-                                      (₹{o.balance_due.toLocaleString('en-IN')} due)
-                                    </span>
-                                  ) : (
-                                    <span className="ml-2 font-semibold text-emerald-600">✓ Settled</span>
-                                  )}
-                                </div>
-
-                                <Link
-                                  to={`/crm/sales?tab=orders&order_id=${o.id}`}
-                                  className="text-brand-600 hover:text-brand-800 font-bold text-[10px] flex items-center"
-                                >
-                                  <span>View Ledger</span>
-                                  <Eye className="w-3 h-3 ml-1" />
-                                </Link>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* VIEW 2: ALL TRANSACTIONS TABLE */}
+      {/* VIEW 1: ALL TRANSACTIONS TABLE (DEFAULT SELECTED) */}
       {viewMode === 'table' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           {loading ? (
@@ -1036,7 +1156,7 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
               <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-40" />
               <p className="font-semibold text-slate-700">No sales transactions found</p>
               <p className="text-xs text-slate-500 mt-1">
-                Click "New Retail Sale" to record a sale with complete cost accounting.
+                Try adjusting the filters above or click "New Sale" to record a sale.
               </p>
             </div>
           ) : (
@@ -1058,10 +1178,16 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map((o) => {
-                    const sold = Number(o.sold_price !== undefined ? o.sold_price : (o.total_amount || 0));
-                    const init = Number(o.initial_price !== undefined ? o.initial_price : Math.round(sold * 0.88));
+                    const sold = Number(
+                      o.sold_price !== undefined ? o.sold_price : o.total_amount || 0
+                    );
+                    const init = Number(
+                      o.initial_price !== undefined ? o.initial_price : Math.round(sold * 0.88)
+                    );
                     const misc = Number(o.miscellaneous_charges || 0);
-                    const profit = Number(o.net_profit !== undefined ? o.net_profit : (sold - init + misc));
+                    const profit = Number(
+                      o.net_profit !== undefined ? o.net_profit : sold - init + misc
+                    );
                     const marginPct = sold > 0 ? ((profit / sold) * 100).toFixed(1) : '0';
 
                     return (
@@ -1083,7 +1209,8 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
                             {o.items && o.items.length > 0 ? (
                               o.items.map((it) => (
                                 <div key={it.id} className="text-[11px] text-slate-700 truncate">
-                                  <span className="font-bold text-slate-900">{it.quantity}x</span> {it.name}
+                                  <span className="font-bold text-slate-900">{it.quantity}x</span>{' '}
+                                  {it.name}
                                 </div>
                               ))
                             ) : (
@@ -1160,6 +1287,365 @@ export const OrdersSubPage: React.FC<OrdersSubPageProps> = ({
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* VIEW 2: DAILY TIMELINE & MONTH CALENDAR (2-Column Layout) */}
+      {viewMode === 'daily_timeline' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* LEFT COLUMN: 1-WEEK TIMELINE DISPLAY ONLY (Past 7 Days including current day) */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+                1-Week Sales Timeline (Past 7 Days)
+              </span>
+              <span className="text-xs text-slate-400 font-medium">Daily transaction breakdown</span>
+            </div>
+
+            {selectedCalendarDate && !past7Days.includes(selectedCalendarDate) && (
+              <div className="p-3 bg-brand-50 border border-brand-200 rounded-2xl flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-brand-900">
+                    Inspecting Calendar Day: {selectedCalendarDate}
+                  </div>
+                  <div className="text-[11px] text-brand-700">
+                    {filtered.length} transaction{filtered.length === 1 ? '' : 's'} recorded
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedCalendarDate(null)}
+                  className="px-2.5 py-1 text-xs font-bold bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors cursor-pointer"
+                >
+                  Clear Selection
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {past7Days.map((dayStr) => {
+                const dayOrders = filtered.filter((o) => o.booking_date?.startsWith(dayStr));
+                const dayUnits = dayOrders.reduce((sum, o) => {
+                  if (o.items && o.items.length > 0) {
+                    return sum + o.items.reduce((s, it) => s + it.quantity, 0);
+                  }
+                  return sum + 1;
+                }, 0);
+
+                const dayRevenue = dayOrders.reduce(
+                  (sum, o) => sum + Number(o.total_amount || 0),
+                  0
+                );
+                const dayProfit = dayOrders.reduce((sum, o) => {
+                  if (o.net_profit !== undefined) return sum + Number(o.net_profit);
+                  const sold = Number(o.sold_price || o.total_amount || 0);
+                  const init = Number(o.initial_price || Math.round(sold * 0.88));
+                  const misc = Number(o.miscellaneous_charges || 0);
+                  return sum + (sold - init + misc);
+                }, 0);
+
+                const dObj = new Date(`${dayStr}T00:00:00`);
+                const isToday = dayStr === todayStr;
+                const isYesterday =
+                  dayStr === new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                const dayLabel = isToday
+                  ? 'Today'
+                  : isYesterday
+                  ? 'Yesterday'
+                  : dObj.toLocaleDateString('en-IN', { weekday: 'short' });
+                const formattedDate = dObj.toLocaleDateString('en-IN', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                });
+
+                const isSelected = selectedCalendarDate === dayStr;
+
+                return (
+                  <div
+                    key={dayStr}
+                    className={`rounded-2xl border transition-all overflow-hidden ${
+                      isSelected
+                        ? 'border-brand-500 bg-brand-50/20 shadow-md ring-1 ring-brand-500'
+                        : dayOrders.length > 0
+                        ? 'border-slate-200 bg-white shadow-sm'
+                        : 'border-slate-100 bg-slate-50/40 opacity-70'
+                    }`}
+                  >
+                    {/* Day Header Row */}
+                    <div className="p-3.5 flex items-center justify-between border-b border-slate-100">
+                      <div className="flex items-center space-x-2.5">
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                            isToday
+                              ? 'bg-brand-600 text-white'
+                              : 'bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          {dayLabel}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800">{formattedDate}</span>
+                        <span className="text-xs text-slate-400 font-mono">({dayStr})</span>
+                      </div>
+
+                      <div className="flex items-center space-x-3 text-xs">
+                        <div className="text-slate-600">
+                          <span className="font-bold text-slate-900">{dayUnits}</span> units (
+                          {dayOrders.length} sales)
+                        </div>
+                        <div className="font-bold text-slate-900 font-mono">
+                          ₹{dayRevenue.toLocaleString('en-IN')}
+                        </div>
+                        {dayProfit > 0 && (
+                          <div className="font-bold text-emerald-700 font-mono">
+                            +₹{dayProfit.toLocaleString('en-IN')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Day Orders List */}
+                    {dayOrders.length === 0 ? (
+                      <div className="py-3 px-4 text-xs text-slate-400 italic">
+                        No sales recorded on this day
+                      </div>
+                    ) : (
+                      <div className="p-3 space-y-2">
+                        {dayOrders.map((o) => {
+                          const sold = Number(
+                            o.sold_price !== undefined ? o.sold_price : o.total_amount || 0
+                          );
+                          const init = Number(
+                            o.initial_price !== undefined ? o.initial_price : Math.round(sold * 0.88)
+                          );
+                          const misc = Number(o.miscellaneous_charges || 0);
+                          const profit = Number(
+                            o.net_profit !== undefined ? o.net_profit : sold - init + misc
+                          );
+
+                          return (
+                            <div
+                              key={o.id}
+                              className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                            >
+                              <div className="flex items-start space-x-3">
+                                <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                                  {isVehicleOrder(o) ? (
+                                    <Car className="w-4 h-4 text-brand-600" />
+                                  ) : (
+                                    <Package className="w-4 h-4 text-purple-600" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-xs font-bold text-slate-900">
+                                    {o.customer_name}{' '}
+                                    <span className="text-slate-400 font-normal">
+                                      ({o.customer_phone})
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-600 mt-0.5">
+                                    {o.items && o.items.length > 0
+                                      ? o.items.map((it) => `${it.quantity}x ${it.name}`).join(', ')
+                                      : `${o.brand} ${o.model_name}`}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center space-x-3 text-xs self-end sm:self-auto">
+                                <div className="text-right font-mono">
+                                  <div className="font-bold text-slate-900">
+                                    ₹{o.total_amount.toLocaleString('en-IN')}
+                                  </div>
+                                  <div className="text-[10px] text-emerald-700 font-bold">
+                                    +₹{profit.toLocaleString('en-IN')} profit
+                                  </div>
+                                </div>
+
+                                <Link
+                                  to={`/crm/sales?tab=orders&order_id=${o.id}`}
+                                  className="p-1.5 text-brand-600 hover:text-brand-800 bg-white border border-slate-200 rounded-lg shadow-2xs transition-colors"
+                                  title="View Ledger"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </Link>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: FULL MONTH CALENDAR WITH 4-SET SALES COLOR CODE */}
+          <div className="lg:col-span-5 bg-gradient-to-br from-[#0c1322] via-[#111c35] to-[#0a101d] text-white rounded-3xl border border-indigo-500/30 shadow-2xl p-5 sticky top-6 relative overflow-hidden backdrop-blur-2xl">
+            {/* Ambient decorative luminous glowing gradient orbs */}
+            <div className="absolute -top-16 -right-16 w-44 h-44 bg-gradient-to-br from-emerald-400/25 via-teal-300/15 to-transparent rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-16 -left-16 w-44 h-44 bg-gradient-to-tr from-indigo-500/25 via-brand-400/15 to-transparent rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute top-1/2 left-1/3 w-36 h-36 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Specular glass shine edge highlight */}
+            <div className="absolute top-0 inset-x-6 h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+
+            {/* Calendar Month Header */}
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <div className="flex items-center space-x-2.5">
+                <span className="p-2 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white shadow-md shadow-emerald-500/30 border border-emerald-300/30">
+                  <Calendar className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-black text-white tracking-wide">
+                    {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </h3>
+                  <p className="text-[11px] text-indigo-200/80 font-medium">Sales activity heatmap</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={() =>
+                    setCalendarMonth(new Date(calYear, calMonth - 1, 1))
+                  }
+                  className="p-1.5 rounded-xl border border-white/15 bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer shadow-xs backdrop-blur-sm"
+                  title="Previous Month"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCalendarMonth(new Date())}
+                  className="px-2.5 py-1 text-[11px] font-black rounded-xl border border-emerald-400/30 bg-gradient-to-r from-emerald-500/30 to-teal-500/30 text-emerald-200 hover:from-emerald-500 hover:to-teal-500 hover:text-white transition-all cursor-pointer shadow-xs backdrop-blur-sm"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() =>
+                    setCalendarMonth(new Date(calYear, calMonth + 1, 1))
+                  }
+                  className="p-1.5 rounded-xl border border-white/15 bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer shadow-xs backdrop-blur-sm"
+                  title="Next Month"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Weekday Headers */}
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black text-indigo-300/80 uppercase mb-2 tracking-wider relative z-10">
+              <span>Su</span>
+              <span>Mo</span>
+              <span>Tu</span>
+              <span>We</span>
+              <span>Th</span>
+              <span>Fr</span>
+              <span>Sa</span>
+            </div>
+
+            {/* Days Grid Container */}
+            <div className="p-2.5 rounded-2xl bg-black/30 backdrop-blur-md border border-white/[0.08] shadow-inner relative z-10">
+              <div className="grid grid-cols-7 gap-1.5">
+                {calMonthDays.map(({ dateStr, dayNum, isCurrentMonth }, idx) => {
+                  const count = salesCountByDate[dateStr] || 0;
+                  const isSelected = selectedCalendarDate === dateStr;
+                  const isTodayDate = dateStr === todayStr;
+
+                  // 4 set color coding for sales:
+                  // 0 sales: translucent glass
+                  // 1 sale: light emerald glass
+                  // 2-3 sales: vibrant vivid emerald
+                  // 4+ sales: glowing amber / electric emerald
+                  let colorClass = 'bg-white/[0.05] text-slate-300 border border-white/[0.08] hover:bg-white/[0.12] hover:text-white';
+                  if (count === 1) {
+                    colorClass = 'bg-gradient-to-br from-emerald-500/35 to-teal-500/35 text-emerald-200 border border-emerald-400/40 font-bold hover:bg-emerald-500/50 shadow-xs';
+                  } else if (count >= 2 && count <= 3) {
+                    colorClass = 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border border-emerald-300/90 font-black shadow-md hover:brightness-110';
+                  } else if (count >= 4) {
+                    colorClass = 'bg-gradient-to-br from-amber-400 via-emerald-400 to-teal-400 text-slate-950 border border-amber-200 font-black shadow-lg shadow-emerald-500/40 hover:brightness-105';
+                  }
+
+                  if (!isCurrentMonth) {
+                    colorClass = 'text-slate-600 bg-transparent border-transparent hover:bg-white/[0.03]';
+                  }
+
+                  return (
+                    <button
+                      key={`${dateStr}-${idx}`}
+                      onClick={() => {
+                        if (!isCurrentMonth) return;
+                        setSelectedCalendarDate(isSelected ? null : dateStr);
+                      }}
+                      title={`${dateStr}: ${count} sales`}
+                      className={`h-9 rounded-xl flex flex-col items-center justify-center relative transition-all cursor-pointer text-xs ${colorClass} ${
+                        isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-105 z-10 shadow-lg' : ''
+                      }`}
+                    >
+                      <span className="leading-none">{dayNum}</span>
+                      {count > 0 && isCurrentMonth && (
+                        <span
+                          className={`text-[9px] leading-tight font-black ${
+                            count >= 4 ? 'text-slate-950 font-black' : count >= 2 ? 'text-white' : 'text-emerald-300'
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      )}
+                      {isTodayDate && isCurrentMonth && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400 absolute bottom-1" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 4-Color Legend & Active Filter */}
+            <div className="mt-4 pt-3.5 border-t border-white/10 space-y-2.5 relative z-10">
+              <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between text-[11px] text-slate-300 backdrop-blur-sm">
+                <span className="font-bold text-indigo-200/90 uppercase text-[10px] tracking-wider">
+                  Sales Volume Key:
+                </span>
+                <div className="flex items-center space-x-2 text-[10px] font-semibold">
+                  <span className="flex items-center space-x-1">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-white/10 border border-white/20 inline-block" />
+                    <span className="text-slate-400">0</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/40 border border-emerald-400/50 inline-block" />
+                    <span className="text-emerald-300">1</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-br from-emerald-500 to-teal-600 border border-emerald-300 inline-block" />
+                    <span className="text-emerald-200">2-3</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-gradient-to-br from-amber-400 to-emerald-400 border border-amber-200 inline-block" />
+                    <span className="text-amber-300">4+</span>
+                  </span>
+                </div>
+              </div>
+
+              {selectedCalendarDate ? (
+                <div className="p-2.5 bg-gradient-to-r from-brand-600/40 via-indigo-600/40 to-emerald-600/40 border border-emerald-400/40 rounded-xl flex items-center justify-between backdrop-blur-md">
+                  <div className="text-xs text-white font-bold flex items-center space-x-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>Filter Active: {selectedCalendarDate}</span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedCalendarDate(null)}
+                    className="text-[11px] text-emerald-300 font-bold hover:text-white underline cursor-pointer"
+                  >
+                    Clear Filter
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[10px] text-indigo-200/60 text-center font-medium">
+                  Click any calendar date to filter transactions and timeline.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

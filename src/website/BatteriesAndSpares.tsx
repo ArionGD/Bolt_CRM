@@ -247,7 +247,7 @@ export const BatteriesAndSpares: React.FC = () => {
                       {item.warranty}
                     </span>
                     <a
-                      href={`https://wa.me/919800011111?text=Hello%20Trisha%20Motors,%20I%20want%20to%20inquire%20about%20${encodeURIComponent(item.name)}`}
+                      href={`https://wa.me/918294173308?text=Hello%20Trisha%20Motors,%20I%20want%20to%20inquire%20about%20${encodeURIComponent(item.name)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center text-[11px] font-bold text-brand-600 hover:text-brand-800 mt-0.5"
@@ -277,7 +277,7 @@ export const BatteriesAndSpares: React.FC = () => {
               </div>
             </div>
             <a
-              href="tel:+919800011111"
+              href="tel:+918294173308"
               className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl whitespace-nowrap shadow-sm shrink-0"
             >
               📞 Call Showroom Workshop
@@ -364,7 +364,7 @@ export const BatteriesAndSpares: React.FC = () => {
               </button>
 
               <div className="pt-2 text-center text-[11px] text-slate-400">
-                Or WhatsApp us directly at <span className="font-bold text-slate-700">+91 98000 11111</span>
+                Or WhatsApp us directly at <span className="font-bold text-slate-700">082941 73308</span>
               </div>
             </form>
           )}
@@ -373,7 +373,7 @@ export const BatteriesAndSpares: React.FC = () => {
           <div className="pt-3 border-t border-slate-100 space-y-2 text-[11px] text-slate-600">
             <div className="flex items-center space-x-2">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span>Workshop Open: Mon – Sun 9 AM to 8:30 PM</span>
+              <span>Workshop Open: Mon – Sat, 9 AM to 10 PM</span>
             </div>
             <div className="flex items-center space-x-2">
               <Truck className="w-3.5 h-3.5 text-slate-400" />

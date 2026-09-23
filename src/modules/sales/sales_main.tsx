@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
-import { Car, Cpu } from 'lucide-react';
+import { Car, Cpu, Layers } from 'lucide-react';
 import { OrdersSubPage } from './components/OrdersSubPage';
 import { SalesReportsSubPage } from './components/SalesReportsSubPage';
 import { OrderDetailSubPage } from './components/OrderDetailSubPage';
@@ -8,7 +8,7 @@ import { QuotationsSubPage } from './components/QuotationsSubPage';
 import { TestDrivesSubPage } from './components/TestDrivesSubPage';
 import { LeadsSubPage } from './components/LeadsSubPage';
 
-export type SalesCategory = 'vehicle' | 'component';
+export type SalesCategory = 'all' | 'vehicle' | 'component';
 
 export const SalesMain: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,17 +46,27 @@ export const SalesMain: React.FC = () => {
     return <LeadsSubPage />;
   }
 
-  // Determine active category for Sales Tracker: 'vehicle' or 'component' (default: 'vehicle')
+  // Determine active category for Sales Tracker: 'all' | 'vehicle' | 'component' (default: 'all')
+  const typeParam = searchParams.get('type') || subtab;
   const activeCategory: SalesCategory =
-    searchParams.get('type') === 'component' || subtab === 'component'
-      ? 'component'
-      : 'vehicle';
+    typeParam === 'vehicle' || typeParam === 'component' ? typeParam : 'all';
 
   const handleCategoryChange = (category: SalesCategory) => {
-    setSearchParams({ type: category });
+    const nextParams = new URLSearchParams(searchParams);
+    if (category === 'all') {
+      nextParams.delete('type');
+    } else {
+      nextParams.set('type', category);
+    }
+    setSearchParams(nextParams);
   };
 
   const tabs = [
+    {
+      id: 'all' as const,
+      label: 'All',
+      icon: Layers,
+    },
     {
       id: 'vehicle' as const,
       label: 'Vehicle',
@@ -71,7 +81,7 @@ export const SalesMain: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Sales Tracker Header with Vehicle & Component Options */}
+      {/* Sales Tracker Header with All, Vehicle & Component Options */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -79,8 +89,8 @@ export const SalesMain: React.FC = () => {
           </h1>
         </div>
 
-        {/* Right-Side Sub-Tab Toggle: Vehicle and Component */}
-        <div className="flex items-center space-x-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200/80 overflow-x-auto select-none">
+        {/* Right-Side Sub-Tab Toggle: All, Vehicle and Component */}
+        <div className="flex items-center space-x-1.5 p-1.5 bg-gradient-to-r from-slate-100 via-indigo-50/60 to-emerald-50/60 rounded-2xl border border-slate-200/90 shadow-inner overflow-x-auto select-none">
           {tabs.map((t) => {
             const Icon = t.icon;
             const isActive = activeCategory === t.id;
@@ -89,10 +99,10 @@ export const SalesMain: React.FC = () => {
                 key={t.id}
                 type="button"
                 onClick={() => handleCategoryChange(t.id)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer ${
                   isActive
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                    ? 'bg-gradient-to-r from-brand-600 via-brand-500 to-indigo-600 text-white shadow-md shadow-brand-500/25 border border-white/20'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
                 }`}
               >
                 <Icon className="w-4 h-4" />

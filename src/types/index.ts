@@ -328,3 +328,50 @@ export interface ComponentItem {
   notes?: string;
   created_at?: string;
 }
+
+export type ServiceStatus =
+  | 'received'
+  | 'in_progress'
+  | 'ready_for_pickup'
+  | 'delivered'
+  | 'cancelled';
+
+export interface ServicePartUsed {
+  id: string;
+  part_name: string;
+  quantity: number;
+  unit_cost: number;
+  total_cost: number;
+}
+
+export interface ServiceJob {
+  id: string;
+  job_card_no: string;
+  service_date: string;
+  // Customer details (manual entry)
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  // Vehicle details (manual entry)
+  vehicle_model: string;
+  vehicle_number: string;
+  odometer_km?: number;
+  // Issue & Service details
+  service_type: string;
+  issue_description: string;
+  mechanic_notes?: string;
+  assigned_technician?: string;
+  // Financial calculation
+  parts_used: ServicePartUsed[];
+  parts_total_cost: number;
+  labour_charges: number;
+  miscellaneous_charges?: number;
+  discount?: number;
+  total_amount: number;
+  paid_amount: number;
+  balance_due: number;
+  payment_mode?: 'cash' | 'upi' | 'card' | 'credit';
+  status: ServiceStatus;
+  delivery_date?: string;
+  created_at: string;
+}
